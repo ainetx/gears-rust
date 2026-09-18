@@ -47,8 +47,30 @@
         "items": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "gts-identifier"
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "gts-identifier",
+                "description": "Builtin plugin GTS identifier, with no configuration."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "plugin_ref": {
+                    "type": "string",
+                    "format": "gts-identifier",
+                    "description": "Builtin plugin GTS identifier."
+                  },
+                  "config": {
+                    "type": "object",
+                    "description": "Plugin-specific configuration (shape defined by the referenced plugin)."
+                  }
+                },
+                "required": [ "plugin_ref" ],
+                "description": "Plugin binding with configuration."
+              }
+            ]
           },
           "default": [ ],
           "description": "List of plugins applied to this route."
@@ -58,6 +80,10 @@
     "rate_limit": {
       "$ref": "#/definitions/rate_limit",
       "description": "Rate limiting configuration for the route."
+    },
+    "cors": {
+      "$ref": "#/definitions/cors",
+      "description": "CORS configuration for the route."
     }
   },
   "required": [ "upstream_id", "match" ],
@@ -157,6 +183,30 @@
             }
           }
         },
+        "budget": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [ "unlimited", "allocated", "shared" ],
+              "default": "unlimited",
+              "description": "Budget accounting mode across the tenant hierarchy."
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Total budget available for allocation/sharing."
+            },
+            "overcommit_ratio": {
+              "type": "number",
+              "minimum": 1.0,
+              "maximum": 2.0,
+              "default": 1.0,
+              "description": "Allowed overcommit factor when allocating shared budget to descendants."
+            }
+          },
+          "description": "Hierarchical budget allocation for this rate limit."
+        },
         "scope": {
           "type": "string",
           "enum": [ "global", "tenant", "user", "ip", "route" ],
@@ -174,6 +224,11 @@
           "minimum": 1,
           "default": 1,
           "description": "Tokens consumed per request. Useful for weighted endpoints."
+        },
+        "response_headers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include X-RateLimit-* headers on responses."
         }
       },
       "required": [ "sustained" ]

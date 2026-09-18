@@ -1,0 +1,28 @@
+# Body size limit enforced at the outer api-gateway layer (64MB)
+
+## Inbound request
+
+Declare a `Content-Length` above the outer api-gateway's own body-limit layer (e2e default: 64MB, see `config/e2e-local.yaml`), sent to the platform's front door rather than directly to OAGW.
+
+```http
+POST /api/oagw/v1/proxy/<alias>/v1/test HTTP/1.1
+Host: api-gateway.example.com
+Authorization: Bearer <tenant-token>
+Content-Type: application/json
+Content-Length: 200000000
+
+small body
+```
+
+## Expected response
+
+- `413 Payload Too Large`
+- Plain-text body (not `application/problem+json`) — this rejection happens at the api-gateway's `RequestBodyLimitLayer`, in front of OAGW, before the request ever reaches the OAGW proxy handler.
+- No `X-OAGW-Error-Source` header — OAGW never saw the request.
+
+## What to check
+
+- There are **two independent body-size ceilings** in the deployed topology, not one:
+  1. The outer api-gateway's `RequestBodyLimitLayer` (64MB in e2e config) — rejects first, with a plain-text 413.
+  2. OAGW's own cap (100MB, see [negative-8.1](negative-8.1-maximum-body-size-limit-enforced.md)) — only reachable for a body between the two ceilings; rejects with a `problem+json` `400` (`OutOfRange`/"Out of Range"), not a `413`.
+- Because the outer ceiling is lower, a request large enough to hit OAGW's own 100MB cap never reaches OAGW in this topology — the outer layer always fires first. [negative-8.1](negative-8.1-maximum-body-size-limit-enforced.md) documents OAGW's own logical limit and error shape, which is the contract OAGW's code owns; this scenario documents the outer layer that actually fronts it in production/e2e deployments.
