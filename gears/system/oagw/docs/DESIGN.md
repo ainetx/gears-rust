@@ -400,7 +400,7 @@ Plugin chain composition: upstream plugins execute before route plugins (`[U1, U
 
 #### GTS Types Registry Catalog
 
-Beyond the plugin identifiers above, OAGW registers 7 JSON Schema entities at startup — `upstream`, `route`, `protocol`, `auth_plugin`, `guard_plugin`, `transform_plugin`, `proxy` — plus 2 `protocol` instances (`http.v1`, `grpc.v1`), which are not plugins. Combined with the 12 plugin identifiers listed above (6 auth + 3 guard + 3 transform), the registry holds 21 entities total (`domain/type_catalog.rs::oagw_gts_entities()`).
+Beyond the plugin identifiers above, OAGW registers 7 JSON Schema entities at startup — `upstream`, `route`, `protocol`, `auth_plugin`, `guard_plugin`, `transform_plugin`, `proxy` — plus 2 `protocol` instances (`http.v1`, `grpc.v1`), which are not plugins. Combined with the 12 plugin identifiers listed above (6 auth + 3 guard + 3 transform), the registry holds 21 entities total.
 
 **Custom Plugins**: Starlark scripts with sandboxed execution (no network/file I/O, timeout/memory limits enforced). Immutable after creation; GC for unlinked plugins after configurable TTL.
 
@@ -711,7 +711,7 @@ Request classification uses `upstream.protocol` to determine match strategy:
 
 #### Error Response Format
 
-All gateway errors follow RFC 9457 Problem Details (`application/problem+json`). Every error resolves through the shared canonical-errors library (`CanonicalError::*` / `#[resource_error]`-derived builders in `oagw/src/api/rest/error.rs`) — there is no OAGW-specific `type` namespace. The wire `type` always comes from the canonical category below; OAGW's own identity (`cf.core.oagw.{upstream,route,proxy,auth_plugin,guard_plugin,transform_plugin}.v1~`) appears only in the separate `resource_type` extension field, which scopes *which* resource the error is about without changing *which category* of error it is.
+All gateway errors follow RFC 9457 Problem Details (`application/problem+json`). Every error resolves through the shared canonical-errors library — there is no OAGW-specific `type` namespace. The wire `type` always comes from the canonical category below; OAGW's own identity (`cf.core.oagw.{upstream,route,proxy,auth_plugin,guard_plugin,transform_plugin}.v1~`) appears only in the separate `resource_type` extension field, which scopes *which* resource the error is about without changing *which category* of error it is.
 
 | Error Type | HTTP | Canonical GTS Type | `resource_type` scope | Retriable | Description |
 |---|---|---|---|---|---|
@@ -738,7 +738,7 @@ All gateway errors follow RFC 9457 Problem Details (`application/problem+json`).
 
 Several distinct `Error Type` rows above share the same canonical `type` and HTTP status (e.g. all six 503 rows are `service_unavailable`) — they are still distinguishable on the wire by `detail` and, where applicable, `resource_type`/`resource_name`, but a client branching purely on `type` cannot distinguish e.g. `ProtocolError` from `CircuitBreakerOpen`.
 
-**Exception**: guard-plugin-originated `5xx` rejections do not follow this rule. `guard_rejected_to_canonical`'s `500..=599` arm (`oagw/src/api/rest/error.rs`) discards the guard's real status, `error_code`, and detail, and emits a fixed, generic `service_unavailable` detail instead — the specific cause is logged server-side at `WARN` with `trace_id`, never placed on the wire (see [positive-10.7 Scenario E](../scenarios/plugins/guards/positive-10.7-required-headers-guard-plugin-enforcement.md)). For this one path, `detail` is *not* occurrence-specific.
+**Exception**: guard-plugin-originated `5xx` rejections do not follow this rule. The gateway maps any guard-supplied `5xx` status to the generic `service_unavailable` category, discarding the guard's real status, error code, and detail — the specific cause is logged server-side at `WARN` with `trace_id`, never placed on the wire (see [positive-10.7 Scenario E](../scenarios/plugins/guards/positive-10.7-required-headers-guard-plugin-enforcement.md)). For this one path, `detail` is *not* occurrence-specific.
 
 **Standard Fields** (RFC 9457):
 - `type`: GTS identifier for the error type (used for programmatic error handling)
