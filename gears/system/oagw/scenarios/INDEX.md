@@ -384,6 +384,10 @@ Call your external service through OAGW's proxy endpoint: `{METHOD} /api/oagw/v1
 - **Scenario**: *Covered within hierarchical configuration scenarios.*
 - **Mechanism**: `inherit` merges origins by union. `enforce` forbids child adding origins.
 
+#### Route vs. upstream CORS precedence
+- **Scenario**: [positive-10.8-route-vs-upstream-cors-precedence.md](plugins/guards/positive-10.8-route-vs-upstream-cors-precedence.md)
+- **Mechanism**: A separate merge axis from tenant-hierarchy sharing above. Upstream `sharing: enforce` is sticky and blocks any route override regardless of the route's own sharing. Otherwise, route `sharing: private`/`enforce` skips the route's CORS entirely; `sharing: inherit` makes the route's config win wholesale except `allowed_origins`, which is unioned with the upstream's.
+
 ---
 
 ### Guard plugins
