@@ -54,13 +54,21 @@
                 "description": "Builtin plugin GTS identifier, with no configuration."
               },
               {
+                "type": "string",
+                "format": "uuid",
+                "description": "Custom plugin UUID"
+              },
+              {
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
                   "plugin_ref": {
                     "type": "string",
-                    "format": "gts-identifier",
-                    "description": "Builtin plugin GTS identifier."
+                    "description": "Builtin plugin GTS identifier, or a custom plugin UUID.",
+                    "oneOf": [
+                      { "format": "gts-identifier" },
+                      { "format": "uuid" }
+                    ]
                   },
                   "config": {
                     "type": "object",
@@ -74,7 +82,7 @@
             ]
           },
           "default": [ ],
-          "description": "List of plugins applied to this route."
+          "description": "List of plugins applied to this route. Builtin plugins referenced by GTS ID (optionally with config), custom plugins by UUID."
         }
       }
     },
