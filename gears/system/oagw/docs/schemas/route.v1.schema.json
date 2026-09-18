@@ -197,7 +197,7 @@
         "response_headers": {
           "type": "boolean",
           "default": true,
-          "description": "Include X-RateLimit-* headers on responses."
+          "description": "Include X-RateLimit-* headers on responses. In a hierarchical merge, this field is not independently inherited: the effective rate_limit is selected wholesale (the stricter of ancestor vs. descendant by requests/second), and response_headers travels with whichever whole config wins — a descendant's own response_headers value has no effect if its rate_limit loses the min-rate comparison."
         }
       },
       "required": [ "sustained" ]

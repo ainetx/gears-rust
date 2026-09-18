@@ -738,6 +738,8 @@ All gateway errors follow RFC 9457 Problem Details (`application/problem+json`).
 
 Several distinct `Error Type` rows above share the same canonical `type` and HTTP status (e.g. all six 503 rows are `service_unavailable`) — they are still distinguishable on the wire by `detail` and, where applicable, `resource_type`/`resource_name`, but a client branching purely on `type` cannot distinguish e.g. `ProtocolError` from `CircuitBreakerOpen`.
 
+**Exception**: guard-plugin-originated `5xx` rejections do not follow this rule. `guard_rejected_to_canonical`'s `500..=599` arm (`oagw/src/api/rest/error.rs`) discards the guard's real status, `error_code`, and detail, and emits a fixed, generic `service_unavailable` detail instead — the specific cause is logged server-side at `WARN` with `trace_id`, never placed on the wire (see [positive-10.7 Scenario E](../scenarios/plugins/guards/positive-10.7-required-headers-guard-plugin-enforcement.md)). For this one path, `detail` is *not* occurrence-specific.
+
 **Standard Fields** (RFC 9457):
 - `type`: GTS identifier for the error type (used for programmatic error handling)
 - `title`: Human-readable summary
