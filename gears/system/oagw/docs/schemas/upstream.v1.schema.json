@@ -93,7 +93,8 @@
         },
         "config": {
           "type": "object",
-          "description": "Authentication plugin configuration."
+          "additionalProperties": { "type": "string" },
+          "description": "Authentication plugin configuration. Values must be strings — the wire DTO (`AuthConfig.config`) is a string-to-string map."
         }
       }
     },
@@ -135,7 +136,8 @@
                   },
                   "config": {
                     "type": "object",
-                    "description": "Plugin-specific configuration (shape defined by the referenced plugin)."
+                    "additionalProperties": { "type": "string" },
+                    "description": "Plugin-specific configuration (shape defined by the referenced plugin). Values must be strings — the wire DTO is a string-to-string map."
                   }
                 },
                 "required": [ "plugin_ref" ],

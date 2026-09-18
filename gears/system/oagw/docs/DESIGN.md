@@ -711,33 +711,32 @@ Request classification uses `upstream.protocol` to determine match strategy:
 
 #### Error Response Format
 
-All gateway errors follow RFC 9457 Problem Details (`application/problem+json`) with GTS `type` identifiers.
+All gateway errors follow RFC 9457 Problem Details (`application/problem+json`). Every error resolves through the shared canonical-errors library (`CanonicalError::*` / `#[resource_error]`-derived builders in `oagw/src/api/rest/error.rs`) — there is no OAGW-specific `type` namespace. The wire `type` always comes from the canonical category below; OAGW's own identity (`cf.core.oagw.{upstream,route,proxy,auth_plugin,guard_plugin,transform_plugin}.v1~`) appears only in the separate `resource_type` extension field, which scopes *which* resource the error is about without changing *which category* of error it is.
 
-| Error Type | HTTP | GTS Instance ID | Retriable | Description |
-|---|---|---|---|---|
-| RouteError | 400 | `gts.cf.core.errors.err.v1~cf.oagw.validation.error.v1` | No | General route validation error |
-| ValidationError | 400 | `gts.cf.core.errors.err.v1~cf.oagw.validation.error.v1` | No | Request validation failed |
-| MissingTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.oagw.routing.missing_target_host.v1` | No | X-OAGW-Target-Host header required for multi-endpoint upstream with common suffix alias |
-| InvalidTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.oagw.routing.invalid_target_host.v1` | No | X-OAGW-Target-Host header format is invalid (must be hostname or IP, no port/path/special chars) |
-| UnknownTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.oagw.routing.unknown_target_host.v1` | No | X-OAGW-Target-Host value does not match any configured endpoint |
-| AuthenticationFailed | 401 | `gts.cf.core.errors.err.v1~cf.oagw.auth.failed.v1` | No | Authentication to upstream failed |
-| PermissionDenied | 403 | `gts.cf.core.errors.err.v1~cf.core.err.permission_denied.v1` | No | AuthZ denied the resolved identity (canonical error; e.g. nil-tenant token) |
-| RouteNotFound | 404 | `gts.cf.core.errors.err.v1~cf.oagw.route.not_found.v1` | No | No matching route found |
-| PluginInUse | 409 | `gts.cf.core.errors.err.v1~cf.oagw.plugin.in_use.v1` | No | Plugin in use |
-| PayloadTooLarge | 400 | `gts.cf.core.errors.err.v1~cf.core.err.out_of_range.v1` | No | Request payload exceeds limit (canonical error; moved off `413`) |
-| RateLimitExceeded | 429 | `gts.cf.core.errors.err.v1~cf.oagw.rate_limit.exceeded.v1` | Yes | Rate limit exceeded |
-| SecretNotFound | 500 | `gts.cf.core.errors.err.v1~cf.oagw.secret.not_found.v1` | No | Referenced secret not found |
-| ProtocolError | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | No | Protocol-level error (canonical error; moved off `502`) |
-| DownstreamError | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | Depends | Upstream service error (canonical error; moved off `502`) |
-| StreamAborted | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | No | Stream connection aborted (canonical error; moved off `502`) |
-| LinkUnavailable | 503 | `gts.cf.core.errors.err.v1~cf.oagw.link.unavailable.v1` | Yes | Upstream link unavailable |
-| CircuitBreakerOpen | 503 | `gts.cf.core.errors.err.v1~cf.oagw.circuit_breaker.open.v1` | Yes | Circuit breaker open |
-| PluginNotFound | 503 | `gts.cf.core.errors.err.v1~cf.oagw.plugin.not_found.v1` | No | Plugin not found |
-| ConnectionTimeout | 504 | `gts.cf.core.errors.err.v1~cf.oagw.timeout.connection.v1` | Yes | Connection timeout |
-| RequestTimeout | 504 | `gts.cf.core.errors.err.v1~cf.oagw.timeout.request.v1` | Yes | Request timeout |
-| IdleTimeout | 504 | `gts.cf.core.errors.err.v1~cf.oagw.timeout.idle.v1` | Yes | Idle timeout |
+| Error Type | HTTP | Canonical GTS Type | `resource_type` scope | Retriable | Description |
+|---|---|---|---|---|---|
+| RouteError / ValidationError | 400 | `gts.cf.core.errors.err.v1~cf.core.err.invalid_argument.v1` | `cf.core.oagw.proxy.v1~` | No | Request validation failed |
+| MissingTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.core.err.invalid_argument.v1` | `cf.core.oagw.proxy.v1~` | No | X-OAGW-Target-Host header required for multi-endpoint upstream with common suffix alias |
+| InvalidTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.core.err.invalid_argument.v1` | `cf.core.oagw.proxy.v1~` | No | X-OAGW-Target-Host header format is invalid (must be hostname or IP, no port/path/special chars) |
+| UnknownTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.core.err.invalid_argument.v1` | `cf.core.oagw.proxy.v1~` | No | X-OAGW-Target-Host value does not match any configured endpoint |
+| PayloadTooLarge | 400 | `gts.cf.core.errors.err.v1~cf.core.err.out_of_range.v1` | `cf.core.oagw.proxy.v1~` | No | Request payload exceeds limit (moved off `413`) |
+| AuthenticationFailed | 401 | `gts.cf.core.errors.err.v1~cf.core.err.unauthenticated.v1` | none (constructed directly, no resource scope) | No | Authentication to upstream failed |
+| PermissionDenied | 403 | `gts.cf.core.errors.err.v1~cf.core.err.permission_denied.v1` | `cf.core.oagw.proxy.v1~` (or none, depending on call site) | No | AuthZ denied the resolved identity (e.g. nil-tenant token) |
+| RouteNotFound | 404 | `gts.cf.core.errors.err.v1~cf.core.err.not_found.v1` | `cf.core.oagw.route.v1~` | No | No matching route found |
+| PluginInUse | 409 | `gts.cf.core.errors.err.v1~cf.core.err.already_exists.v1` | varies by plugin kind (`auth_plugin`/`guard_plugin`/`transform_plugin`/`proxy`) | No | Plugin in use |
+| RateLimitExceeded | 429 | `gts.cf.core.errors.err.v1~cf.core.err.resource_exhausted.v1` | `cf.core.oagw.proxy.v1~` | Yes | Rate limit exceeded |
+| SecretNotFound | 500 | `gts.cf.core.errors.err.v1~cf.core.err.internal.v1` | none (constructed directly) | No | Referenced secret not found |
+| ProtocolError | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | No | Protocol-level error (moved off `502`) |
+| DownstreamError | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | Depends | Upstream service error (moved off `502`) |
+| StreamAborted | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | No | Stream connection aborted (moved off `502`) |
+| LinkUnavailable | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | Yes | Upstream link unavailable |
+| CircuitBreakerOpen | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | Yes | Circuit breaker open |
+| PluginNotFound | 503 | `gts.cf.core.errors.err.v1~cf.core.err.not_found.v1` | varies by plugin kind (`auth_plugin`/`guard_plugin`/`transform_plugin`/`proxy`) | No | Plugin not found |
+| ConnectionTimeout | 504 | `gts.cf.core.errors.err.v1~cf.core.err.deadline_exceeded.v1` | `cf.core.oagw.proxy.v1~` | Yes | Connection timeout |
+| RequestTimeout | 504 | `gts.cf.core.errors.err.v1~cf.core.err.deadline_exceeded.v1` | `cf.core.oagw.proxy.v1~` | Yes | Request timeout |
+| IdleTimeout | 504 | `gts.cf.core.errors.err.v1~cf.core.err.deadline_exceeded.v1` | `cf.core.oagw.proxy.v1~` | Yes | Idle timeout |
 
-Rows marked "canonical error" resolve through the shared canonical-errors library (`CanonicalError::*` in `oagw/src/api/rest/error.rs`) and carry that library's `cf.core.err.*` wire type; all other rows are OAGW-specific `cf.oagw.*` types constructed directly by OAGW.
+Several distinct `Error Type` rows above share the same canonical `type` and HTTP status (e.g. all six 503 rows are `service_unavailable`) — they are still distinguishable on the wire by `detail` and, where applicable, `resource_type`/`resource_name`, but a client branching purely on `type` cannot distinguish e.g. `ProtocolError` from `CircuitBreakerOpen`.
 
 **Standard Fields** (RFC 9457):
 - `type`: GTS identifier for the error type (used for programmatic error handling)

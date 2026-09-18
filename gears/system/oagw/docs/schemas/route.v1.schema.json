@@ -64,7 +64,8 @@
                   },
                   "config": {
                     "type": "object",
-                    "description": "Plugin-specific configuration (shape defined by the referenced plugin)."
+                    "additionalProperties": { "type": "string" },
+                    "description": "Plugin-specific configuration (shape defined by the referenced plugin). Values must be strings — the wire DTO is a string-to-string map."
                   }
                 },
                 "required": [ "plugin_ref" ],
