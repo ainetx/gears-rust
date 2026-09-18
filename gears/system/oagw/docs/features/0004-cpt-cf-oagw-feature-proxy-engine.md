@@ -90,14 +90,14 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
 - Auth plugin fails credential injection (401 AuthenticationFailed)
 - Guard plugin rejects request (4xx per guard rule)
 - Body validation fails (400 ValidationError or 400 PayloadTooLarge)
-- Upstream returns error response (502 DownstreamError passthrough)
+- Upstream returns error response (503 DownstreamError passthrough, canonical `service_unavailable`)
 - Upstream connection or request times out (504 ConnectionTimeout / RequestTimeout)
-- WebSocket upgrade requested (501 ProtocolError — not supported by unidirectional bridge)
-- Pingora-level protocol error (502 ProtocolError — e.g. HTTP/2 downgrade failure)
+- WebSocket upgrade requested — bridged bidirectionally; succeeds with `101 Switching Protocols` when the upstream also upgrades, otherwise OAGW propagates the upstream's own non-101 response (see [positive-14.1](../../scenarios/protocols/websocket/positive-14.1-websocket-upgrade-proxied.md) / [negative-14.8](../../scenarios/protocols/websocket/negative-14.8-websocket-upgrade-rejected-non-ws-upstream.md))
+- Pingora-level protocol error (503 ProtocolError, canonical `service_unavailable` — e.g. HTTP/2 downgrade failure)
 - X-OAGW-Target-Host missing for multi-endpoint common-suffix upstream (400 MissingTargetHost)
 - X-OAGW-Target-Host format invalid (400 InvalidTargetHost)
 - X-OAGW-Target-Host does not match any configured endpoint (400 UnknownTargetHost)
-- Upstream connection fails at network level (502 DownstreamError)
+- Upstream connection fails at network level (503 DownstreamError, canonical `service_unavailable`)
 
 **Steps**:
 1. [x] - `p1` - Actor sends `{METHOD} /api/oagw/v1/proxy/{alias}[/{path}][?{query}]` - `inst-proxy-1`
@@ -135,12 +135,16 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
 23. [x] - `p1` - **IF** `X-OAGW-Target-Host` present AND value does not match any configured endpoint host - `inst-proxy-23`
     1. [x] - `p1` - **RETURN** 400 UnknownTargetHost with `X-OAGW-Error-Source: gateway` - `inst-proxy-23a`
 24. [x] - `p1` - **IF** request contains `Upgrade: websocket` header - `inst-proxy-24`
-    1. [x] - `p1` - **RETURN** 501 ProtocolError with `X-OAGW-Error-Source: gateway` (WebSocket requires bidirectional tunnel; current bridge is unidirectional) - `inst-proxy-24a`
+    1. [x] - `p1` - Forward the upgrade handshake to the upstream via a bidirectional bridge - `inst-proxy-24a`
+    2. [x] - `p1` - **IF** upstream responds `101 Switching Protocols` - `inst-proxy-24b`
+       1. [x] - `p1` - Complete the upgrade and relay frames bidirectionally until either side closes - `inst-proxy-24b1`
+    3. [x] - `p1` - **ELSE** (upstream does not upgrade) - `inst-proxy-24c`
+       1. [x] - `p1` - Propagate the upstream's own non-101 response as-is - `inst-proxy-24c1`
 25. [x] - `p1` - Build outbound HTTP request: set target URL (scheme + host + port + path), method, headers, body - `inst-proxy-25`
 26. [x] - `p1` - Serialize request into in-memory duplex stream and forward to Pingora `ProxyHttp` engine via `cpt-cf-oagw-algo-pingora-bridge` - `inst-proxy-26`
 27. [x] - `p1` - **IF** Pingora reports upstream connection failure (refused, DNS, TLS) via `fail_to_proxy` - `inst-proxy-27`
     1. [x] - `p1` - Map Pingora `ErrorType` to `DomainError` and write RFC 9457 Problem response with `X-OAGW-Error-Source: gateway` - `inst-proxy-27a`
-    2. [x] - `p1` - **RETURN** 502 DownstreamError with `X-OAGW-Error-Source: gateway` - `inst-proxy-27b`
+    2. [x] - `p1` - **RETURN** 503 DownstreamError (canonical `service_unavailable`) with `X-OAGW-Error-Source: gateway` - `inst-proxy-27b`
 28. [x] - `p1` - **IF** connection or request timeout (Pingora `ConnectTimedout`, `ReadTimedout`, `WriteTimedout`) - `inst-proxy-28`
     1. [x] - `p1` - **RETURN** 504 ConnectionTimeout or RequestTimeout via `cpt-cf-oagw-algo-error-source-classification` - `inst-proxy-28a`
 29. [x] - `p1` - **IF** Pingora reports HTTP/2 error (`H2Error`, `H2Downgrade`) - `inst-proxy-29`
@@ -414,7 +418,7 @@ The system **MUST** set `X-OAGW-Error-Source: gateway` on all gateway-originated
 
 - [x] `p1` - **ID**: `cpt-cf-oagw-dod-pingora-proxy`
 
-The system **MUST** use Pingora (`pingora-proxy`, `pingora-load-balancing`) as the upstream HTTP engine, connected via an in-memory `tokio::io::duplex` bridge (`cpt-cf-oagw-algo-pingora-bridge`). Pingora manages connection pooling, TLS termination, and health checks internally. Multi-endpoint upstreams **MUST** distribute requests via `LoadBalancer<RoundRobin>` with `TcpHealthCheck` (10s interval). When `X-OAGW-Target-Host` header is present, the system **MUST** select the matching endpoint explicitly (no round-robin). All endpoints in a pool **MUST** have identical protocol, scheme, and port. `X-OAGW-Target-Host` **MUST** be validated: required for multi-endpoint common-suffix upstreams (400 MissingTargetHost); format must be hostname or IP without port/path/special chars (400 InvalidTargetHost); value must match a configured endpoint (400 UnknownTargetHost). Non-timeout upstream connection failures (refused, DNS, TLS) **MUST** return 502 DownstreamError. WebSocket `Upgrade` requests **MUST** be rejected with 501 ProtocolError before reaching the bridge (the duplex bridge is unidirectional and cannot support the bidirectional tunnel WebSocket requires).
+The system **MUST** use Pingora (`pingora-proxy`, `pingora-load-balancing`) as the upstream HTTP engine, connected via an in-memory `tokio::io::duplex` bridge (`cpt-cf-oagw-algo-pingora-bridge`). Pingora manages connection pooling, TLS termination, and health checks internally. Multi-endpoint upstreams **MUST** distribute requests via `LoadBalancer<RoundRobin>` with `TcpHealthCheck` (10s interval). When `X-OAGW-Target-Host` header is present, the system **MUST** select the matching endpoint explicitly (no round-robin). All endpoints in a pool **MUST** have identical protocol, scheme, and port. `X-OAGW-Target-Host` **MUST** be validated: required for multi-endpoint common-suffix upstreams (400 MissingTargetHost); format must be hostname or IP without port/path/special chars (400 InvalidTargetHost); value must match a configured endpoint (400 UnknownTargetHost). Non-timeout upstream connection failures (refused, DNS, TLS) **MUST** return 503 DownstreamError (canonical `service_unavailable`). WebSocket `Upgrade` requests **MUST** be bridged bidirectionally through the duplex bridge, succeeding with `101 Switching Protocols` when the upstream itself upgrades.
 
 Pingora-level errors are handled by the `fail_to_proxy` callback, which **MUST** convert `pingora_core::ErrorType` variants into `DomainError`, then use the canonical `DomainError` → RFC 9457 `Problem` pipeline. The response **MUST** include `X-OAGW-Error-Source: gateway` and `Content-Type: application/problem+json`.
 
@@ -454,10 +458,10 @@ Pingora-level errors are handled by the `fail_to_proxy` callback, which **MUST**
 - [x] Multi-endpoint upstream with common-suffix alias returns 400 MissingTargetHost when `X-OAGW-Target-Host` is absent
 - [x] Invalid `X-OAGW-Target-Host` format (not hostname or IP) returns 400 InvalidTargetHost
 - [x] `X-OAGW-Target-Host` value not matching any configured endpoint returns 400 UnknownTargetHost
-- [x] Upstream connection failures (refused, DNS, TLS) return 502 DownstreamError with `X-OAGW-Error-Source: gateway`
+- [x] Upstream connection failures (refused, DNS, TLS) return 503 DownstreamError (canonical `service_unavailable`) with `X-OAGW-Error-Source: gateway`
 - [x] No credentials appear in logs, error messages, or API responses
 - [x] Application layer does not add retries; only Pingora's built-in connection-level retry (up to 1 retry on reusable connections) is permitted
-- [x] WebSocket upgrade requests (`Upgrade: websocket`) are rejected with 501 ProtocolError and `X-OAGW-Error-Source: gateway`
+- [x] WebSocket upgrade requests (`Upgrade: websocket`) are bridged bidirectionally: `101 Switching Protocols` when the upstream upgrades, otherwise the upstream's own non-101 response is propagated
 - [x] Pingora `fail_to_proxy` errors produce RFC 9457 Problem Details body with GTS type identifiers and `X-OAGW-Error-Source: gateway`
 - [x] When `X-OAGW-Error-Source` is absent (normal upstream response after `upstream_response_filter` strips `x-oagw-*` headers), `ErrorSource` defaults to `Upstream`; Pingora-generated error responses (`fail_to_proxy`) always set `X-OAGW-Error-Source: gateway` explicitly
 
@@ -481,7 +485,7 @@ Credential isolation is enforced by resolving secrets from `cred_store` at reque
 - **States section**: Not applicable — proxy engine is a stateless request-response flow. Circuit breaker state management belongs to `cpt-cf-oagw-feature-rate-limiting`.
 - **Multi-tenant hierarchy merge**: Out of scope — hierarchical config override and sharing mode merge strategies belong to cpt-cf-oagw-feature-tenant-hierarchy.
 - **Rate limiting enforcement**: Out of scope — rate limiting and circuit breaker during proxy flow belong to `cpt-cf-oagw-feature-rate-limiting`.
-- **SSE/WebTransport streaming**: Out of scope — streaming protocol support belongs to `cpt-cf-oagw-feature-streaming`. **WebSocket upgrade requests are explicitly rejected** with 501 ProtocolError in this feature because the unidirectional duplex bridge cannot support the bidirectional tunnel WebSocket requires.
+- **SSE/WebTransport streaming**: Out of scope — streaming protocol support belongs to `cpt-cf-oagw-feature-streaming`. **WebSocket upgrade is in scope for this feature and is bridged bidirectionally** (see step `inst-proxy-24` above) — it is not rejected; it succeeds end-to-end whenever the upstream itself completes the handshake.
 - **Metrics and audit logging**: Out of scope — Prometheus metrics, structured logging, and CORS handling belong to `cpt-cf-oagw-feature-observability`.
 - **UX/Accessibility**: Not applicable — OAGW is a backend API gear with no user interface.
 - **Compliance/Privacy**: OAGW does not handle PII directly. Credential isolation via `cred_store` references covers data protection. No additional regulatory compliance beyond standard platform requirements.

@@ -210,7 +210,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-https-only`.
    1. [x] - `p1` - Cache entry: `{key} → HTTP/1.1, expires_at = now + 1h` - `inst-proto-5a`
    2. [x] - `p1` - **RETURN** HTTP/1.1 - `inst-proto-5b`
 6. [x] - `p1` - **IF** TLS handshake fails entirely - `inst-proto-6`
-   1. [x] - `p1` - **RETURN** error: connection failed (502 DownstreamError) - `inst-proto-6a`
+   1. [x] - `p1` - **RETURN** error: connection failed (503 DownstreamError, canonical `service_unavailable`) - `inst-proto-6a`
 7. [x] - `p1` - **IF** cached version fails at runtime (e.g., HTTP/2 connection error on a host cached as HTTP/2) - `inst-proto-7`
    1. [x] - `p1` - Evict cache entry for this key - `inst-proto-7a`
    2. [x] - `p1` - Re-negotiate from step 3 on next request (not current request — no retry per `cpt-cf-oagw-principle-no-retry`) - `inst-proto-7b`
@@ -295,7 +295,7 @@ The system **MUST** handle WebTransport session establishment via extended CONNE
 
 - [x] `p1` - **ID**: `cpt-cf-oagw-dod-protocol-version-cache`
 
-The system **MUST** implement adaptive per-host HTTP version detection using ALPN during TLS handshake. On first connection to an upstream host, the system **MUST** offer both `h2` and `http/1.1` via ALPN. The negotiated version **MUST** be cached per `{scheme}://{host}:{port}` with a 1-hour TTL. Subsequent requests to the same host **MUST** use the cached version. On TLS handshake failure, the system **MUST** return 502 DownstreamError. Cache eviction **MUST** occur after TTL expiry. Additionally, if a request fails due to a protocol-level error on a cached version (e.g., HTTP/2 connection error on a host cached as HTTP/2-capable), the cache entry **MUST** be evicted so the next request re-negotiates via ALPN (current request is not retried per `cpt-cf-oagw-principle-no-retry`).
+The system **MUST** implement adaptive per-host HTTP version detection using ALPN during TLS handshake. On first connection to an upstream host, the system **MUST** offer both `h2` and `http/1.1` via ALPN. The negotiated version **MUST** be cached per `{scheme}://{host}:{port}` with a 1-hour TTL. Subsequent requests to the same host **MUST** use the cached version. On TLS handshake failure, the system **MUST** return 503 DownstreamError (canonical `service_unavailable`). Cache eviction **MUST** occur after TTL expiry. Additionally, if a request fails due to a protocol-level error on a cached version (e.g., HTTP/2 connection error on a host cached as HTTP/2-capable), the cache entry **MUST** be evicted so the next request re-negotiates via ALPN (current request is not retried per `cpt-cf-oagw-principle-no-retry`).
 
 **Implements**:
 - `cpt-cf-oagw-algo-protocol-version-negotiation`
@@ -327,7 +327,7 @@ The system **MUST** implement adaptive per-host HTTP version detection using ALP
 - [x] HTTP version negotiation uses ALPN during TLS handshake, offering `h2` and `http/1.1`
 - [x] Negotiated HTTP version is cached per `{scheme}://{host}:{port}` with 1-hour TTL
 - [x] Cached HTTP version is used for subsequent requests to the same host
-- [x] TLS handshake failure during version negotiation returns 502 DownstreamError
+- [x] TLS handshake failure during version negotiation returns 503 DownstreamError (canonical `service_unavailable`)
 - [x] All upstream connections use HTTPS-only per `cpt-cf-oagw-constraint-https-only`
 - [x] `X-OAGW-Error-Source` header is set correctly for all streaming error scenarios (gateway vs upstream)
 - [x] No credentials appear in logs or error messages during streaming sessions
