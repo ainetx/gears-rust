@@ -516,7 +516,7 @@ Default validation checks (no configuration required):
 | Check | Rule | Error |
 |---|---|---|
 | Content-Length | Must be valid integer if present; must match actual size | `400 ValidationError` |
-| Max size | Hard limit 100MB; reject before buffering | `413 PayloadTooLarge` |
+| Max size | Hard limit 100MB; reject before buffering | `400 PayloadTooLarge` |
 | Transfer-Encoding | Reject unsupported encodings (only `chunked` supported) | `400 ValidationError` |
 
 Additional validation (JSON Schema, content-type checks, custom rules) implemented via guard plugins.
