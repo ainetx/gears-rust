@@ -89,7 +89,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
 - Route not matched for method/path (404 RouteNotFound)
 - Auth plugin fails credential injection (401 AuthenticationFailed)
 - Guard plugin rejects request (4xx per guard rule)
-- Body validation fails (400 ValidationError or 413 PayloadTooLarge)
+- Body validation fails (400 ValidationError or 400 PayloadTooLarge)
 - Upstream returns error response (502 DownstreamError passthrough)
 - Upstream connection or request times out (504 ConnectionTimeout / RequestTimeout)
 - WebSocket upgrade requested (501 ProtocolError — not supported by unidirectional bridge)
@@ -117,7 +117,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
     1. [x] - `p1` - **RETURN** 404 RouteNotFound with `X-OAGW-Error-Source: gateway` - `inst-proxy-10a`
 11. [x] - `p1` - Validate request body via `cpt-cf-oagw-algo-body-validation` - `inst-proxy-11`
 12. [x] - `p1` - **IF** body validation fails - `inst-proxy-12`
-    1. [x] - `p1` - **RETURN** 400 ValidationError or 413 PayloadTooLarge with `X-OAGW-Error-Source: gateway` - `inst-proxy-12a`
+    1. [x] - `p1` - **RETURN** 400 ValidationError or 400 PayloadTooLarge with `X-OAGW-Error-Source: gateway` - `inst-proxy-12a`
 13. [x] - `p1` - Compose plugin chain via `cpt-cf-oagw-algo-plugin-chain-execution` - `inst-proxy-13`
 14. [x] - `p1` - Execute auth plugin: inject credentials into outbound request - `inst-proxy-14`
 15. [x] - `p1` - **IF** auth plugin fails (secret not found, credential error) - `inst-proxy-15`
@@ -265,12 +265,12 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
    1. [x] - `p1` - **IF** Content-Length is not a valid non-negative integer - `inst-body-1a`
       1. [x] - `p1` - **RETURN** 400 ValidationError - `inst-body-1a1`
    2. [x] - `p1` - **IF** Content-Length exceeds 100MB (104,857,600 bytes) - `inst-body-1b`
-      1. [x] - `p1` - **RETURN** 413 PayloadTooLarge (reject before buffering per `cpt-cf-oagw-constraint-body-limit`) - `inst-body-1b1`
+      1. [x] - `p1` - **RETURN** 400 PayloadTooLarge (canonical `OutOfRange`; reject before buffering per `cpt-cf-oagw-constraint-body-limit`) - `inst-body-1b1`
 2. [x] - `p1` - **IF** Transfer-Encoding header present - `inst-body-2`
    1. [x] - `p1` - **IF** encoding is not `chunked` - `inst-body-2a`
       1. [x] - `p1` - **RETURN** 400 ValidationError (only `chunked` supported) - `inst-body-2a1`
 3. [x] - `p1` - **IF** actual body size exceeds 100MB during streaming read - `inst-body-3`
-   1. [x] - `p1` - **RETURN** 413 PayloadTooLarge (abort read) - `inst-body-3a`
+   1. [x] - `p1` - **RETURN** 400 PayloadTooLarge (canonical `OutOfRange`; abort read) - `inst-body-3a`
 4. [x] - `p1` - **RETURN** validation passed - `inst-body-4`
 
 ### Pingora In-Memory Bridge
@@ -390,7 +390,7 @@ The system **MUST** strip hop-by-hop headers (Connection, Keep-Alive, Proxy-Auth
 
 - [x] `p1` - **ID**: `cpt-cf-oagw-dod-body-validation`
 
-The system **MUST** validate Content-Length (valid non-negative integer), enforce 100MB hard limit (reject before buffering per `cpt-cf-oagw-constraint-body-limit`), and reject unsupported Transfer-Encoding (only `chunked` supported). Invalid requests **MUST** return 400 ValidationError or 413 PayloadTooLarge.
+The system **MUST** validate Content-Length (valid non-negative integer), enforce 100MB hard limit (reject before buffering per `cpt-cf-oagw-constraint-body-limit`), and reject unsupported Transfer-Encoding (only `chunked` supported). Invalid requests **MUST** return 400 ValidationError or 400 PayloadTooLarge.
 
 **Implements**:
 - `cpt-cf-oagw-algo-body-validation`
@@ -443,7 +443,7 @@ Pingora-level errors are handled by the `fail_to_proxy` callback, which **MUST**
 - [x] `Host` (HTTP/1.1) or `:authority` (HTTP/2) is replaced with upstream endpoint host
 - [x] Header set/add/remove operations from upstream/route config are applied in declared order
 - [x] Content-Length validation rejects non-integer or mismatched values with 400
-- [x] 100MB body limit is enforced before buffering (413 PayloadTooLarge)
+- [x] 100MB body limit is enforced before buffering (400 PayloadTooLarge)
 - [x] Only `chunked` Transfer-Encoding is accepted; others return 400
 - [x] Gateway errors use RFC 9457 Problem Details (`application/problem+json`) with GTS type identifiers
 - [x] `X-OAGW-Error-Source: gateway` is set on all gateway-originated errors
