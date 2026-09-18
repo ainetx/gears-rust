@@ -220,9 +220,9 @@ Call your external service through OAGW's proxy endpoint: `{METHOD} /api/oagw/v1
 - **Scenario**: [positive-7.5-upstream-headers-config-applies-simple-transformations.md](proxy-api/request-transforms/positive-7.5-upstream-headers-config-applies-simple-transformations.md)
 - **Mechanism**: `upstream.headers.request.set` adds/overwrites headers. Header removal rules apply. Invalid header names/values rejected with `400 PD`.
 
-#### Request correlation headers propagate end-to-end
+#### Request-ID header reaches the upstream
 - **Scenario**: [positive-7.6-request-correlation-headers-propagate-end-end.md](proxy-api/request-transforms/positive-7.6-request-correlation-headers-propagate-end-end.md)
-- **Mechanism**: Client `X-Request-ID` forwarded to upstream and included in response. If absent, gateway generates one.
+- **Mechanism**: Client `X-Request-ID` forwarded to upstream only via explicit passthrough allowlist. If absent, the `request_id` `TransformPlugin` generates one when bound. Neither path is reflected back in the response or an audit record.
 
 ---
 
@@ -726,9 +726,9 @@ Full integration walkthroughs — each demonstrates the complete journey (upstre
 
 ### Guard rejections
 
-#### Timeout guard plugin enforces request timeout → 504
+#### Gear-level request timeout enforced (not a guard plugin) → 504
 - **Scenario**: [negative-10.1-timeout-guard-plugin-enforces-request-timeout.md](plugins/guards/negative-10.1-timeout-guard-plugin-enforces-request-timeout.md)
-- **What happens**: Request exceeding timeout returns `504` gateway timeout (`PD`, `ESrc=gateway`).
+- **What happens**: Request exceeding `proxy_timeout_secs` returns `504` gateway timeout (`PD`, `ESrc=gateway`). Enforced uniformly by gear config, not a bindable `timeout` guard plugin.
 
 #### CORS credentials + wildcard rejected by config validation → 400
 - **Scenario**: [negative-10.3-cors-credentials-wildcard-rejected-config-validation.md](plugins/guards/negative-10.3-cors-credentials-wildcard-rejected-config-validation.md)

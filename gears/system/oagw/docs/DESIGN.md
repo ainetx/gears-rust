@@ -721,14 +721,15 @@ All gateway errors follow RFC 9457 Problem Details (`application/problem+json`) 
 | InvalidTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.oagw.routing.invalid_target_host.v1` | No | X-OAGW-Target-Host header format is invalid (must be hostname or IP, no port/path/special chars) |
 | UnknownTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.oagw.routing.unknown_target_host.v1` | No | X-OAGW-Target-Host value does not match any configured endpoint |
 | AuthenticationFailed | 401 | `gts.cf.core.errors.err.v1~cf.oagw.auth.failed.v1` | No | Authentication to upstream failed |
+| PermissionDenied | 403 | `gts.cf.core.errors.err.v1~cf.core.err.permission_denied.v1` | No | AuthZ denied the resolved identity (canonical error; e.g. nil-tenant token) |
 | RouteNotFound | 404 | `gts.cf.core.errors.err.v1~cf.oagw.route.not_found.v1` | No | No matching route found |
 | PluginInUse | 409 | `gts.cf.core.errors.err.v1~cf.oagw.plugin.in_use.v1` | No | Plugin in use |
-| PayloadTooLarge | 400 | `gts.cf.core.errors.err.v1~cf.core.err.out_of_range.v1` | No | Request payload exceeds limit. Maps to canonical `OutOfRange` — an accepted wire migration moved this off `413` (see `oagw/src/api/rest/error.rs`, test `payload_too_large_now_maps_to_400`). |
+| PayloadTooLarge | 400 | `gts.cf.core.errors.err.v1~cf.core.err.out_of_range.v1` | No | Request payload exceeds limit (canonical error; moved off `413`) |
 | RateLimitExceeded | 429 | `gts.cf.core.errors.err.v1~cf.oagw.rate_limit.exceeded.v1` | Yes | Rate limit exceeded |
 | SecretNotFound | 500 | `gts.cf.core.errors.err.v1~cf.oagw.secret.not_found.v1` | No | Referenced secret not found |
-| ProtocolError | 503 | `gts.cf.core.errors.err.v1~cf.oagw.protocol.error.v1` | No | Protocol-level error. Moved off `502` (see test `protocol_error_now_maps_to_503`). |
-| DownstreamError | 503 | `gts.cf.core.errors.err.v1~cf.oagw.downstream.error.v1` | Depends | Upstream service error. Moved off `502` (see test `downstream_error_now_maps_to_503`). |
-| StreamAborted | 503 | `gts.cf.core.errors.err.v1~cf.oagw.stream.aborted.v1` | No | Stream connection aborted. Moved off `502` (see test `stream_aborted_now_maps_to_503`). |
+| ProtocolError | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | No | Protocol-level error (canonical error; moved off `502`) |
+| DownstreamError | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | Depends | Upstream service error (canonical error; moved off `502`) |
+| StreamAborted | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | No | Stream connection aborted (canonical error; moved off `502`) |
 | LinkUnavailable | 503 | `gts.cf.core.errors.err.v1~cf.oagw.link.unavailable.v1` | Yes | Upstream link unavailable |
 | CircuitBreakerOpen | 503 | `gts.cf.core.errors.err.v1~cf.oagw.circuit_breaker.open.v1` | Yes | Circuit breaker open |
 | PluginNotFound | 503 | `gts.cf.core.errors.err.v1~cf.oagw.plugin.not_found.v1` | No | Plugin not found |
@@ -736,7 +737,7 @@ All gateway errors follow RFC 9457 Problem Details (`application/problem+json`) 
 | RequestTimeout | 504 | `gts.cf.core.errors.err.v1~cf.oagw.timeout.request.v1` | Yes | Request timeout |
 | IdleTimeout | 504 | `gts.cf.core.errors.err.v1~cf.oagw.timeout.idle.v1` | Yes | Idle timeout |
 
-> The `GTS Instance ID` column above uses OAGW's own `cf.oagw.*` error-type namespace. Errors already confirmed to route through the shared canonical-errors library (`PermissionDenied`, `PayloadTooLarge`) surface instead under that library's `cf.core.err.*` namespace on the wire (e.g. `gts://gts.cf.core.errors.err.v1~cf.core.err.out_of_range.v1~`) — spot-check the exact wire `type` for any given error against `oagw/src/api/rest/error.rs` rather than assuming this table's `cf.oagw.*` form for errors not explicitly re-verified here.
+Rows marked "canonical error" resolve through the shared canonical-errors library (`CanonicalError::*` in `oagw/src/api/rest/error.rs`) and carry that library's `cf.core.err.*` wire type; all other rows are OAGW-specific `cf.oagw.*` types constructed directly by OAGW.
 
 **Standard Fields** (RFC 9457):
 - `type`: GTS identifier for the error type (used for programmatic error handling)

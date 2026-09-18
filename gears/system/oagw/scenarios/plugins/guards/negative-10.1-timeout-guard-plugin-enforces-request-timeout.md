@@ -1,4 +1,4 @@
-# Timeout guard plugin enforces request timeout
+# Gear-level request timeout enforced (not a guard plugin)
 
 ## Setup
 

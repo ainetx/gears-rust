@@ -38,3 +38,4 @@ Content-Type: application/json
 ## What to check
 
 - Every other mutable field (headers, plugins, rate_limit, enabled, …) can be updated freely via `PUT` — see [positive-2.5](positive-2.5-update-upstream.md) — only `alias` is immutable once set.
+- `server.endpoints` is the one exception to "freely": it can be changed, but only if the new endpoints' auto-derived alias still matches the existing alias exactly. An endpoint change that would derive a *different* alias (e.g. swapping to a different hostname) is rejected with `400` for the same reason — the alias must not silently change — and a hostname→IP transition is always rejected outright. Delete and re-create the upstream instead of trying to change endpoints across an alias boundary.

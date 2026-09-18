@@ -24,5 +24,5 @@ small body
 
 - There are **two independent body-size ceilings** in the deployed topology, not one:
   1. The outer api-gateway's `RequestBodyLimitLayer` (64MB in e2e config) — rejects first, with a plain-text 413.
-  2. OAGW's own cap (100MB, see [negative-8.1](negative-8.1-maximum-body-size-limit-enforced.md)) — only reachable for a body between the two ceilings; rejects with a `problem+json` `400` (`OutOfRange`/"Out of Range"), not a `413`.
+  2. OAGW's own cap (100MB, see [negative-8.1](negative-8.1-maximum-body-size-limit-enforced.md)) — rejects with a `problem+json` `400` (`OutOfRange`/"Out of Range"), not a `413`. Since 100MB is *higher* than the outer 64MB ceiling, this cap is unreachable in this topology (see below) — it only fires in a deployment that bypasses or raises the outer limit.
 - Because the outer ceiling is lower, a request large enough to hit OAGW's own 100MB cap never reaches OAGW in this topology — the outer layer always fires first. [negative-8.1](negative-8.1-maximum-body-size-limit-enforced.md) documents OAGW's own logical limit and error shape, which is the contract OAGW's code owns; this scenario documents the outer layer that actually fronts it in production/e2e deployments.

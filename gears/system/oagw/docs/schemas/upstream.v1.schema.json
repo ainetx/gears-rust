@@ -283,7 +283,16 @@
               "description": "Allowed overcommit factor when allocating shared budget to descendants."
             }
           },
-          "description": "Hierarchical budget allocation for this rate limit."
+          "if": {
+            "properties": {
+              "mode": { "enum": [ "allocated", "shared" ] }
+            },
+            "required": [ "mode" ]
+          },
+          "then": {
+            "required": [ "total" ]
+          },
+          "description": "Hierarchical budget allocation for this rate limit. `total` is required when `mode` is 'allocated' or 'shared'."
         },
         "scope": {
           "type": "string",

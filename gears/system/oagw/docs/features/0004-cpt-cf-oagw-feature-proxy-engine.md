@@ -216,18 +216,23 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
       1. [x] - `p1` - DB: SELECT plugin FROM oagw_plugin WHERE id = :uuid — must exist and match schema type - `inst-chain-4b1`
    3. [x] - `p1` - **ELSE** (named plugin) - `inst-chain-4c`
       1. [x] - `p1` - Resolve via in-process plugin registry - `inst-chain-4c1`
-   4. [x] - `p1` - **IF** plugin not found - `inst-chain-4d`
-      1. [x] - `p1` - **RETURN** 503 PluginNotFound with `X-OAGW-Error-Source: gateway` - `inst-chain-4d1`
+   4. [x] - `p1` - **IF** plugin not found, handling is type-specific (resolution failure is not a single shared step — each plugin type resolves and handles its own failure at execution time; see steps 6, 8, 9) - `inst-chain-4d`
 5. [x] - `p1` - Resolve upstream auth plugin from auth_plugin_ref / auth_plugin_uuid columns - `inst-chain-5`
 6. [x] - `p1` - Execute auth plugin: resolve credentials from `cred_store` via secret_ref, inject into request - `inst-chain-6`
+   1. [x] - `p1` - **IF** auth plugin resolution fails - `inst-chain-6a`
+      1. [x] - `p1` - **RETURN** 401 AuthenticationFailed - `inst-chain-6a1`
 7. [x] - `p1` - **IF** secret not found or credential resolution fails - `inst-chain-7`
    1. [x] - `p1` - **RETURN** 401 AuthenticationFailed or 500 SecretNotFound - `inst-chain-7a`
 8. [x] - `p1` - **FOR EACH** guard plugin in chain (type = guard) - `inst-chain-8`
-   1. [x] - `p1` - Execute guard: validate request against guard rules (method allowlist, query allowlist, path suffix, timeout) - `inst-chain-8a`
-   2. [x] - `p1` - **IF** guard rejects - `inst-chain-8b`
+   1. [x] - `p1` - **IF** guard plugin resolution fails - `inst-chain-8x`
+      1. [x] - `p1` - **RETURN** 500 Internal — guards use fail-hard semantics; the first resolution failure or rejection terminates the pipeline immediately - `inst-chain-8x1`
+   2. [x] - `p1` - Execute guard: validate request against guard rules (method allowlist, query allowlist, path suffix, timeout) - `inst-chain-8a`
+   3. [x] - `p1` - **IF** guard rejects - `inst-chain-8b`
       1. [x] - `p1` - **RETURN** guard-specific rejection error - `inst-chain-8b1`
 9. [x] - `p1` - **FOR EACH** transform plugin in chain (type = transform, phase = on_request) - `inst-chain-9`
-   1. [x] - `p1` - Execute transform: mutate request headers, body, query as configured - `inst-chain-9a`
+   1. [x] - `p1` - **IF** transform plugin resolution fails, or the transform returns an error - `inst-chain-9x`
+      1. [x] - `p1` - Log a warning and **SKIP** this plugin, continuing the chain — transforms use log-and-continue semantics so a single misbehaving or unresolvable transform cannot block the request - `inst-chain-9x1`
+   2. [x] - `p1` - Execute transform: mutate request headers, body, query as configured - `inst-chain-9a`
 10. [x] - `p1` - **RETURN** processed request ready for upstream forwarding - `inst-chain-10`
 
 ### Header Transformation
