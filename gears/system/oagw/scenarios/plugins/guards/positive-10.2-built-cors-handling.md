@@ -51,6 +51,7 @@ Expected (with `cors.expose_headers: ["x-request-id"]` configured):
 - `200 OK`
 - `Access-Control-Allow-Origin: https://app.example.com` (the configured, non-wildcard origin echoed verbatim — see [positive-10.6](positive-10.6-cors-wildcard-origin-response.md) for the `allowed_origins: ["*"]` case, which returns the literal `*` instead)
 - `Access-Control-Expose-Headers: x-request-id`
+- `Access-Control-Allow-Credentials: true` — present here because *this* Setup's `allow_credentials: true`; unlike the preflight response above, this one is conditional on the resolved upstream's config (see [ADR-0006](../../../docs/ADR/0006-cors.md#actual-request-handling)) and would be absent entirely if `allow_credentials` were `false` or unset.
 - `Vary: Origin`
 
 ## Actual request with disallowed origin
