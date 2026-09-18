@@ -67,7 +67,16 @@ Expected:
 - The client receives `503 Service Unavailable` (`problem+json`), **not** a `400` and **not** a literal `502`. `guard_response` itself signals status `502` internally (`oagw/src/infra/plugin/required_headers_guard.rs`), but `guard_rejected_to_canonical` masks every guard-supplied `5xx` into the canonical `service_unavailable` category — the specific upstream status, `error_code`, and "which header was missing" detail are logged server-side at `WARN` (with `trace_id`) but are **not** placed on the client-facing wire body.
 - This response-phase path is a materially different contract from Scenario B's request-phase path (`400`, with the missing-header name in the wire `detail`) — do not assume the two phases behave the same way.
 
+## Scenario F: unregistered `plugin_ref` → 500, fail-closed (guard plugins only — contrast with transforms)
+
+Bind a `plugin_ref` that isn't registered in the runtime's `GuardPluginRegistry` (e.g. a typo, or a builtin identifier that was renamed).
+
+Expected:
+- `500 Internal Server Error` — guard plugins use fail-hard semantics (`execute_guard_requests` in `oagw/src/infra/proxy/service.rs`): resolution failure returns `DomainError::Internal` before the request ever reaches the guard's own logic. No upstream request is made.
+- This is a *third*, distinct outcome from Scenarios B (`400`, header present but missing) and E (`503`, response-phase) — do not conflate "guard rejects" with "guard plugin_ref doesn't resolve at all".
+- Contrast with **transform** plugins (see [positive-11.10](../transforms/positive-11.10-unknown-transform-plugin-skipped-not-blocking.md)): an unresolved transform `plugin_ref` is logged and skipped, `200 OK` — the opposite failure mode from guards.
+
 ## What to check
 
 - This is the only guard plugin identifier that is actually bindable via `plugins.items[].plugin_ref` — `timeout` and `cors` are cataloged GTS identifiers with no pluggable behavior; see [DESIGN.md](../../../docs/DESIGN.md#plugin-system) and [negative-10.1](negative-10.1-timeout-guard-plugin-enforces-request-timeout.md).
-- Request-phase (Scenarios A-D) and response-phase (Scenario E) rejections have different wire contracts: `400` with a detailed message vs. `503` with a generic, masked one.
+- Request-phase (Scenarios A-D) and response-phase (Scenario E) rejections have different wire contracts: `400` with a detailed message vs. `503` with a generic, masked one. An unresolved `plugin_ref` (Scenario F) is a third contract again: `500`, before either phase's own logic runs.

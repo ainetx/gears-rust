@@ -690,7 +690,7 @@ Full integration walkthroughs — each demonstrates the complete journey (upstre
 
 #### Allocated budget hierarchy sum exceeded → 400
 - **Scenario**: [positive-18.9-budget-allocated-hierarchy-enforcement.md](rate-limiting/positive-18.9-budget-allocated-hierarchy-enforcement.md)
-- **What happens**: Children whose rates sum above `total * overcommit_ratio` are rejected (`budget allocation exceeded`) at creation and on update; rates are normalized to req/s across different windows before comparison; a child omitting `rate_limit` is rejected under an allocated parent.
+- **What happens**: Children whose rates sum above `total * overcommit_ratio` are rejected (`budget allocation exceeded`) at creation and on update; rates are normalized to req/s across different windows before comparison; a child omitting `rate_limit` is rejected under an allocated parent. Known limitations (not exercised by any scenario): validation and persistence are not atomic (a TOCTOU race exists between concurrent sibling writes), and the descendant-tree walk itself is unbounded.
 
 ---
 

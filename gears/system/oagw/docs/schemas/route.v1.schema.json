@@ -47,42 +47,25 @@
         "items": {
           "type": "array",
           "items": {
-            "oneOf": [
-              {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "plugin_ref": {
                 "type": "string",
                 "format": "gts-identifier",
-                "description": "Builtin plugin GTS identifier, with no configuration."
+                "description": "Plugin GTS identifier. Builtin plugins use a fixed named instance (e.g. `...~cf.core.oagw.required_headers.v1`); custom (Starlark) plugins use their own anonymous instance identifier (e.g. `...~<uuid>`, returned by `POST /plugins`) — never a bare UUID with no GTS prefix."
               },
-              {
-                "type": "string",
-                "format": "uuid",
-                "description": "Custom plugin UUID"
-              },
-              {
+              "config": {
                 "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "plugin_ref": {
-                    "type": "string",
-                    "description": "Builtin plugin GTS identifier, or a custom plugin UUID.",
-                    "oneOf": [
-                      { "format": "gts-identifier" },
-                      { "format": "uuid" }
-                    ]
-                  },
-                  "config": {
-                    "type": "object",
-                    "additionalProperties": { "type": "string" },
-                    "description": "Plugin-specific configuration (shape defined by the referenced plugin). Values must be strings — the wire DTO is a string-to-string map."
-                  }
-                },
-                "required": [ "plugin_ref" ],
-                "description": "Plugin binding with configuration."
+                "additionalProperties": { "type": "string" },
+                "description": "Plugin-specific configuration (shape defined by the referenced plugin). Values must be strings — the wire DTO is a string-to-string map."
               }
-            ]
+            },
+            "required": [ "plugin_ref" ],
+            "description": "Plugin binding. The wire DTO (`PluginBinding` in oagw/src/api/rest/dto.rs) requires this object shape — a bare string or bare UUID array element does not deserialize."
           },
           "default": [ ],
-          "description": "List of plugins applied to this route. Builtin plugins referenced by GTS ID (optionally with config), custom plugins by UUID."
+          "description": "List of plugins applied to this route, each an object binding a plugin_ref (builtin or custom) with optional config."
         }
       }
     },
@@ -152,6 +135,7 @@
     "rate_limit": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Route-level rate limit. Unlike upstream.rate_limit, this has no `budget` property: hierarchical budget allocation/sharing is validated and pool-enforced only for upstream rate limits (domain/services/management/budget.rs; a route's bucket is always keyed by the route's own id, never a shared pool_owner_id) — a route-level `budget` would be silently inert.",
       "properties": {
         "sharing": {
           "type": "string",
@@ -191,39 +175,6 @@
               "description": "Maximum burst size (bucket capacity). Defaults to sustained.rate if not specified."
             }
           }
-        },
-        "budget": {
-          "type": "object",
-          "properties": {
-            "mode": {
-              "type": "string",
-              "enum": [ "unlimited", "allocated", "shared" ],
-              "default": "unlimited",
-              "description": "Budget accounting mode across the tenant hierarchy."
-            },
-            "total": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Total budget available for allocation/sharing, denominated per this same rate_limit block's sustained.window (e.g. total=60 with sustained.window='minute' is a 1 req/s ceiling, not an absolute count). Changing sustained.window without adjusting total changes the effective ceiling."
-            },
-            "overcommit_ratio": {
-              "type": "number",
-              "minimum": 1.0,
-              "maximum": 2.0,
-              "default": 1.0,
-              "description": "Allowed overcommit factor when allocating shared budget to descendants."
-            }
-          },
-          "if": {
-            "properties": {
-              "mode": { "enum": [ "allocated", "shared" ] }
-            },
-            "required": [ "mode" ]
-          },
-          "then": {
-            "required": [ "total" ]
-          },
-          "description": "Hierarchical budget allocation for this rate limit. `total` is required when `mode` is 'allocated' or 'shared'."
         },
         "scope": {
           "type": "string",

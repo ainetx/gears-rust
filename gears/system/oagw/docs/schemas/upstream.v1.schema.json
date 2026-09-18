@@ -114,41 +114,24 @@
         "items": {
           "type": "array",
           "items": {
-            "oneOf": [
-              {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "plugin_ref": {
                 "type": "string",
                 "format": "gts-identifier",
-                "description": "Builtin plugin GTS identifier, with no configuration."
+                "description": "Plugin GTS identifier. Builtin plugins use a fixed named instance (e.g. `...~cf.core.oagw.apikey.v1`); custom (Starlark) plugins use their own anonymous instance identifier (e.g. `...~<uuid>`, returned by `POST /plugins`) — never a bare UUID with no GTS prefix."
               },
-              {
-                "type": "string",
-                "format": "uuid",
-                "description": "Custom plugin UUID"
-              },
-              {
+              "config": {
                 "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "plugin_ref": {
-                    "type": "string",
-                    "description": "Builtin plugin GTS identifier, or a custom plugin UUID.",
-                    "oneOf": [
-                      { "format": "gts-identifier" },
-                      { "format": "uuid" }
-                    ]
-                  },
-                  "config": {
-                    "type": "object",
-                    "additionalProperties": { "type": "string" },
-                    "description": "Plugin-specific configuration (shape defined by the referenced plugin). Values must be strings — the wire DTO is a string-to-string map."
-                  }
-                },
-                "required": [ "plugin_ref" ],
-                "description": "Plugin binding with configuration."
+                "additionalProperties": { "type": "string" },
+                "description": "Plugin-specific configuration (shape defined by the referenced plugin). Values must be strings — the wire DTO is a string-to-string map."
               }
-            ]
+            },
+            "required": [ "plugin_ref" ],
+            "description": "Plugin binding. The wire DTO (`PluginBinding` in oagw/src/api/rest/dto.rs) requires this object shape — a bare string or bare UUID array element does not deserialize."
           },
-          "description": "List of plugins applied to this upstream service. Builtin plugins referenced by GTS ID (optionally with config), custom plugins by UUID."
+          "description": "List of plugins applied to this upstream service, each an object binding a plugin_ref (builtin or custom) with optional config."
         }
       }
     },
