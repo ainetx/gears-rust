@@ -50,6 +50,22 @@ resp.status_code == 400
 "rate_limit is required" in resp.text
 ```
 
+## Scenario F: 3-tier nesting — declared cost and granted allowance diverge unchecked
+
+```
+Tenant A: upstream, sustained.rate=100/min, budget={mode: allocated, total: 100}
+Tenant B (child of A): upstream, sustained.rate=5/min, budget={mode: allocated, total: 1000}
+Tenant C1, C2 (children of B): upstream, sustained.rate=400/min each
+```
+
+Step-by-step, each a separate request:
+
+1. **Create B's upstream** (`sustained.rate=5`, its own `budget.total=1000`). Validated only against `A`'s budget: `5 <= 100` → **`201 Created`**. `B`'s own `budget.total=1000` is not compared against anything at this point — nothing in this request touches `A`'s ceiling.
+2. **Create C1's upstream** (`sustained.rate=400`, no `budget`). Validated only against `B`'s budget (the closest allocated ancestor with this alias): `400 <= 1000` → **`201 Created`**.
+3. **Create C2's upstream** (`sustained.rate=400`). Validated against `B`'s budget: `400 + 400 = 800 <= 1000` → **`201 Created`**.
+
+All three requests succeed independently. At no point does any single request compare `B`'s declared `sustained.rate` (5, what `B` cost `A`) against `B`'s own `budget.total` (1000, what `B` grants `C1`/`C2`) — the two numbers are validated by different calls, against different ancestors, and never cross-referenced. `A` believes its subtree needs at most 100/min in total (having admitted `B` at a declared cost of 5); the same subtree can in fact reach 800/min (`C1` + `C2`) with every individual write having passed its own local check.
+
 ## What to check
 
 - `mode: "shared"` does not enforce this sum check — a child may bind to a `shared`-budget parent without declaring its own `rate_limit` at all (see [positive-18.7 Scenario B](positive-18.7-budget-modes-behave-specified.md)).
@@ -57,4 +73,4 @@ resp.status_code == 400
 - See [negative-18.8](negative-18.8-budget-field-validation-errors.md) for the field-shape validation errors that apply before this sum-based enforcement is even reached.
 - **Known limitation, not covered by any scenario here**: this enforcement is validate-then-persist, not atomic (`domain/services/management/mod.rs::update_upstream` calls `validate_budget_allocation` and *then*, as a separate step, `self.upstreams.update(...)` — no transaction or compare-and-swap covers both). Two concurrent `PUT`/create requests for distinct sibling upstreams can each validate against the same pre-update sibling total and both persist, landing the combined allocation above the parent's ceiling. Scenarios A-E above are all single-request, sequential checks and do not exercise this race.
 - **Also unbounded, not covered by any scenario here**: both `validate_budget_allocation` and `validate_descendants_within_budget` resolve the *entire* descendant subtree via `get_descendants` with no depth or result-size limit (see [0005-cpt-cf-oagw-feature-tenant-hierarchy.md §7](../../docs/features/0005-cpt-cf-oagw-feature-tenant-hierarchy.md)) — a very deep or broad tenant hierarchy makes a single budget-affecting write proportionally expensive, with no enforced ceiling on that cost.
-- **Nested allocated budgets (3+ levels) are untested, and the two numbers involved are not cross-checked.** `validate_budget_allocation` only ever validates a write against its *closest* ancestor with the same alias — it does not simultaneously walk multiple ancestor tiers. So if `A(allocated, total=100)` has child `B(allocated, total=50)` which in turn has children `C1`/`C2`, then `C1`/`C2` are validated only against `B`'s budget (50), never directly against `A`'s; `A`'s own check only ever saw `B`'s own `rate_limit.sustained.rate` (a separate field from `B.budget.total`) at the time `B` itself was created. Nothing requires `B`'s declared `sustained.rate` (what it "costs" against `A`'s budget) to bear any relationship to `B`'s own `budget.total` (what `B` in turn allows its own children to sum to) — `B` can under-declare its footprint to `A` while allowing its own descendants to allocate far more, with no validation catching the mismatch. No scenario or test here exercises 3+-level nesting.
+- **Nested allocated budgets (3+ levels, Scenario F): the two numbers involved are not cross-checked, by design or by omission.** `validate_budget_allocation` only ever validates a write against its *closest* ancestor with the same alias — it does not simultaneously walk multiple ancestor tiers. An intermediate tenant's declared `sustained.rate` (its footprint against its own ancestor's budget) and its own `budget.total` (the ceiling it grants its own children) are validated by entirely separate calls that never reference each other. This is not covered by any automated test.
