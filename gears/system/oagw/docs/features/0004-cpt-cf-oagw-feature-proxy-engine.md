@@ -90,7 +90,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
 - Auth plugin fails credential injection (401 AuthenticationFailed)
 - Guard plugin rejects request (4xx per guard rule)
 - Body validation fails (400 ValidationError or 400 PayloadTooLarge)
-- Upstream returns error response (503 DownstreamError passthrough, canonical `service_unavailable`)
+- Upstream returns error response (passthrough as-is with `X-OAGW-Error-Source: upstream` — see `inst-proxy-31b`; not a gateway-fabricated `DownstreamError`)
 - Upstream connection or request times out (504 ConnectionTimeout / RequestTimeout)
 - WebSocket upgrade requested — bridged bidirectionally; succeeds with `101 Switching Protocols` when the upstream also upgrades, otherwise OAGW propagates the upstream's own non-101 response (see [positive-14.1](../../scenarios/protocols/websocket/positive-14.1-websocket-upgrade-proxied.md) / [negative-14.8](../../scenarios/protocols/websocket/negative-14.8-websocket-upgrade-rejected-non-ws-upstream.md))
 - Pingora-level protocol error (503 ProtocolError, canonical `service_unavailable` — e.g. HTTP/2 downgrade failure)
