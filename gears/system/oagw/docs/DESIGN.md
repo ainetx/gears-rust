@@ -638,6 +638,8 @@ Authorization checks:
 
 IDs use anonymous GTS identifiers: `gts.cf.core.oagw.{type}.v1~{uuid}`. Plugins are immutable (no PUT). DELETE returns `409 PluginInUse` when referenced.
 
+**Reachability note**: the five `/api/oagw/v1/plugins*` routes above do not currently appear as registered REST routes in `oagw/src/api` (unlike `/upstreams`/`/routes`, which do). `DomainError::PluginNotFound`/`PluginInUse` and their canonical-conversion logic exist, but nothing in the current codebase constructs or reaches them.
+
 #### CRUD Semantics
 
 **POST (Create)**:
@@ -723,7 +725,7 @@ All gateway errors follow RFC 9457 Problem Details (`application/problem+json`).
 | AuthenticationFailed | 401 | `gts.cf.core.errors.err.v1~cf.core.err.unauthenticated.v1` | none (constructed directly, no resource scope) | No | Authentication to upstream failed |
 | PermissionDenied | 403 | `gts.cf.core.errors.err.v1~cf.core.err.permission_denied.v1` | `cf.core.oagw.proxy.v1~` (or none, depending on call site) | No | AuthZ denied the resolved identity (e.g. nil-tenant token) |
 | RouteNotFound | 404 | `gts.cf.core.errors.err.v1~cf.core.err.not_found.v1` | `cf.core.oagw.route.v1~` | No | No matching route found |
-| PluginInUse | 409 | `gts.cf.core.errors.err.v1~cf.core.err.already_exists.v1` | varies by plugin kind (`auth_plugin`/`guard_plugin`/`transform_plugin`/`proxy`) | No | Plugin in use |
+| PluginInUse | 409 | `gts.cf.core.errors.err.v1~cf.core.err.already_exists.v1` | varies by plugin kind (`auth_plugin`/`guard_plugin`/`transform_plugin`/`proxy`) | No | Plugin in use. Same reachability caveat as `PluginNotFound` above — no `/plugins` DELETE route is registered today. |
 | RateLimitExceeded | 429 | `gts.cf.core.errors.err.v1~cf.core.err.resource_exhausted.v1` | `cf.core.oagw.proxy.v1~` | Yes | Rate limit exceeded |
 | SecretNotFound | 500 | `gts.cf.core.errors.err.v1~cf.core.err.internal.v1` | none (constructed directly) | No | Referenced secret not found |
 | ProtocolError | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | No | Protocol-level error (moved off `502`) |
@@ -731,7 +733,7 @@ All gateway errors follow RFC 9457 Problem Details (`application/problem+json`).
 | StreamAborted | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | No | Stream connection aborted (moved off `502`) |
 | LinkUnavailable | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | Yes | Upstream link unavailable |
 | CircuitBreakerOpen | 503 | `gts.cf.core.errors.err.v1~cf.core.err.service_unavailable.v1` | none | Yes | Circuit breaker open |
-| PluginNotFound | 503 | `gts.cf.core.errors.err.v1~cf.core.err.not_found.v1` | varies by plugin kind (`auth_plugin`/`guard_plugin`/`transform_plugin`/`proxy`) | No | Plugin not found |
+| PluginNotFound | 404 | `gts.cf.core.errors.err.v1~cf.core.err.not_found.v1` | varies by plugin kind (`auth_plugin`/`guard_plugin`/`transform_plugin`/`proxy`) | No | Plugin not found. Not currently constructed by any implemented code path — no `/plugins` REST route is registered, and runtime `plugin_ref` resolution failures use type-specific errors instead (guard → 500 `Internal`, auth → 401 `AuthenticationFailed`, transform → logged and skipped, no error). This row (and `PluginInUse` below) exist in the type system and its canonical-conversion logic, but are effectively unreachable today. |
 | ConnectionTimeout | 504 | `gts.cf.core.errors.err.v1~cf.core.err.deadline_exceeded.v1` | `cf.core.oagw.proxy.v1~` | Yes | Connection timeout |
 | RequestTimeout | 504 | `gts.cf.core.errors.err.v1~cf.core.err.deadline_exceeded.v1` | `cf.core.oagw.proxy.v1~` | Yes | Request timeout |
 | IdleTimeout | 504 | `gts.cf.core.errors.err.v1~cf.core.err.deadline_exceeded.v1` | `cf.core.oagw.proxy.v1~` | Yes | Idle timeout |
