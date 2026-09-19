@@ -736,7 +736,7 @@ All gateway errors follow RFC 9457 Problem Details (`application/problem+json`).
 | RequestTimeout | 504 | `gts.cf.core.errors.err.v1~cf.core.err.deadline_exceeded.v1` | `cf.core.oagw.proxy.v1~` | Yes | Request timeout |
 | IdleTimeout | 504 | `gts.cf.core.errors.err.v1~cf.core.err.deadline_exceeded.v1` | `cf.core.oagw.proxy.v1~` | Yes | Idle timeout |
 
-Several distinct `Error Type` rows above share the same canonical `type` and HTTP status (e.g. all six 503 rows are `service_unavailable`) — they are still distinguishable on the wire by `detail` and, where applicable, `resource_type`/`resource_name`, but a client branching purely on `type` cannot distinguish e.g. `ProtocolError` from `CircuitBreakerOpen`.
+Several distinct `Error Type` rows above share the same canonical `type` and HTTP status — e.g. all `service_unavailable`/503 rows (`ProtocolError`, `DownstreamError`, `StreamAborted`, `LinkUnavailable`, `CircuitBreakerOpen`) — and for this family there is **no reliable field to disambiguate them**, contrary to what a reader might assume from `resource_type`/`resource_name` existing as columns: none of these call sites populate `with_detail()`, so the wire `detail` is the fixed default `"Service temporarily unavailable"` for every one of them (the actual cause is only in the server-side `WARN`/`DEBUG` log, never on the wire), and `resource_type` is `none` for all five. The only per-type wire signal is the `Retry-After` header value, and even that only partially separates them: `ProtocolError`/`DownstreamError`/`StreamAborted` share `Retry-After: 5`; `LinkUnavailable` shares `Retry-After: 10` with the guard-plugin 5xx-masking path below; `CircuitBreakerOpen` shares `Retry-After: 30` with the undocumented `UpstreamDisabled` case. A client can at best narrow a `service_unavailable` response to one of three `Retry-After` buckets — it cannot identify which specific error type produced it from the documented contract alone.
 
 **Exception**: guard-plugin-originated `5xx` rejections do not follow this rule. The gateway maps any guard-supplied `5xx` status to the generic `service_unavailable` category, discarding the guard's real status, error code, and detail — the specific cause is logged server-side at `WARN` with `trace_id`, never placed on the wire (see [positive-10.7 Scenario E](../scenarios/plugins/guards/positive-10.7-required-headers-guard-plugin-enforcement.md)). For this one path, `detail` is *not* occurrence-specific.
 
@@ -744,7 +744,7 @@ Several distinct `Error Type` rows above share the same canonical `type` and HTT
 - `type`: GTS identifier for the error type (used for programmatic error handling)
 - `title`: Human-readable summary
 - `status`: HTTP status code
-- `detail`: Human-readable explanation specific to this occurrence
+- `detail`: Human-readable explanation specific to this occurrence — except for the `service_unavailable` family and guard-plugin `5xx` rejections noted above, where it is a fixed generic string, not occurrence-specific
 - `instance`: URI reference identifying the specific occurrence
 
 **Extension Fields** (OAGW-specific):
