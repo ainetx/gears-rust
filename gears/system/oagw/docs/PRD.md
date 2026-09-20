@@ -456,7 +456,7 @@ The system **MUST** return the following error codes for proxy and management op
 | 504  | Timeout              | Yes       |
 
 - **Note**: `PayloadTooLarge` and `DownstreamError` moved off their historical `413`/`502` codes onto the canonical-errors `OutOfRange`/`ServiceUnavailable` categories (`400`/`503`); see [DESIGN.md's error table](./DESIGN.md#error-response-format) for the verified per-error mapping and source references.
-- **Rationale**: Consistent, well-defined error codes enable clients to implement correct retry and fallback behavior. This table's one-row-per-HTTP-code shape is a simplification: `503` alone maps to five distinct error types with different `Retriable` values (`DownstreamError`, `ProtocolError`, `StreamAborted`, `LinkUnavailable`, `CircuitBreakerOpen`), and the wire response gives no reliable way to tell which one produced a given `503` — see [DESIGN.md's disambiguation caveat](./DESIGN.md#error-response-format) before building retry logic that assumes otherwise.
+- **Rationale**: Consistent, well-defined error codes enable clients to implement correct retry and fallback behavior. This table's one-row-per-HTTP-code shape is a simplification: `503` alone maps to six distinct error types with different `Retriable` values (`DownstreamError`, `ProtocolError`, `StreamAborted`, `LinkUnavailable`, `CircuitBreakerOpen`, `UpstreamDisabled`), and the wire response gives no reliable way to tell which one produced a given `503` — see [DESIGN.md's disambiguation caveat](./DESIGN.md#error-response-format) before building retry logic that assumes otherwise.
 - **Actors**: `cpt-cf-oagw-actor-app-developer`
 
 ## 6. Non-Functional Requirements
