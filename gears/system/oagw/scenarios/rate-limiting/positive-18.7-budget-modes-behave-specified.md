@@ -1,8 +1,10 @@
 # Budget modes: allocated/shared/unlimited
 
+`rate_limit.budget` is an **upstream-only** field — `route.v1.schema.json`'s `rate_limit` has no `budget` property at all (a route-level `budget` would be silently inert; see that schema's own note). Every `rate_limit` below belongs to an upstream.
+
 ## Scenario A: allocated budget
 
-Parent:
+Parent upstream:
 
 ```json
 {

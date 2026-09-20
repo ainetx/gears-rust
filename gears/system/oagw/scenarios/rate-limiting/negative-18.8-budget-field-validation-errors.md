@@ -9,7 +9,8 @@
 (Same for `"mode": "shared"`.)
 
 Expected:
-- `400 Bad Request`
+- `400 Bad Request`, `Content-Type: application/problem+json`
+- `type: "gts://gts.cf.core.errors.err.v1~cf.core.err.invalid_argument.v1~"`, `title: "Invalid Argument"` — this is the canonical `invalid_argument` envelope (`DomainError::Validation` → `OagwProxyError::invalid_argument()`), **not** the `out_of_range` shape used by [negative-8.1](../proxy-api/body-validation/negative-8.1-maximum-body-size-limit-enforced.md)'s 400s.
 - Body text includes `budget.total is required`
 
 ## Scenario B: `overcommit_ratio` out of range
@@ -21,7 +22,7 @@ Expected:
 (Same failure for `overcommit_ratio: 2.5` — above the maximum.)
 
 Expected:
-- `400 Bad Request`
+- `400 Bad Request`, same `invalid_argument` `problem+json` envelope as Scenario A above
 - Body text includes `overcommit_ratio must be between`
 - Valid range is `[1.0, 2.0]` (see [ADR-0004 Schema Changes](../../docs/ADR/0004-rate-limiting.md#schema-changes)).
 

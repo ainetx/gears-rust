@@ -27,6 +27,7 @@ Origin: https://any-origin.com
 
 - `200 OK`
 - `Access-Control-Allow-Origin: *` — the literal wildcard, **not** the request's echoed origin (`https://any-origin.com`).
+- `Vary: Origin` is still present, unconditionally, even though the `Allow-Origin` value itself (`*`) doesn't actually vary by origin in this case — `apply_cors_headers` pushes it regardless of which `Allow-Origin` branch was taken (see [positive-10.2](positive-10.2-built-cors-handling.md), same header for the non-wildcard case).
 
 ## What to check
 
