@@ -62,7 +62,7 @@
               }
             },
             "required": [ "plugin_ref" ],
-            "description": "Plugin binding. The wire DTO (`PluginBinding` in oagw/src/api/rest/dto.rs) requires this object shape — a bare string or bare UUID array element does not deserialize."
+            "description": "Plugin binding. Must be an object with plugin_ref — a bare string or bare UUID array element is not a valid binding."
           },
           "default": [ ],
           "description": "List of plugins applied to this route, each an object binding a plugin_ref (builtin or custom) with optional config."
@@ -135,7 +135,7 @@
     "rate_limit": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Route-level rate limit. Unlike upstream.rate_limit, this has no `budget` property: hierarchical budget allocation/sharing is validated and pool-enforced only for upstream rate limits (domain/services/management/budget.rs; a route's bucket is always keyed by the route's own id, never a shared pool_owner_id) — a route-level `budget` would be silently inert.",
+      "description": "Route-level rate limit. Has no `budget` property — hierarchical budget allocation is an upstream-only concept; a route's bucket is always its own, never a shared pool.",
       "properties": {
         "sharing": {
           "type": "string",

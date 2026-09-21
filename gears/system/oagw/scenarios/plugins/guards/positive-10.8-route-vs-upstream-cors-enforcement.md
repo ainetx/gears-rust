@@ -1,6 +1,6 @@
-# Route vs. upstream CORS precedence
+# Route vs. upstream CORS enforcement
 
-This is a distinct merge axis from tenant-hierarchy CORS sharing (see [ADR-0006 § Hierarchical Configuration](../../../docs/ADR/0006-cors.md#hierarchical-configuration)) — it combines a route's own `cors` with its upstream's already-effective `cors`, within the same tenant. See [ADR-0006 § Route vs. Upstream CORS Precedence](../../../docs/ADR/0006-cors.md#route-vs-upstream-cors-precedence) for the full rule table.
+This is a distinct merge axis from tenant-hierarchy CORS sharing (see [ADR-0006 § Hierarchical Configuration](../../../docs/ADR/0006-cors.md#hierarchical-configuration)) — it combines a route's own `cors` with its upstream's already-effective `cors`, within the same tenant. See [ADR-0006 § Route vs. Upstream CORS Enforcement](../../../docs/ADR/0006-cors.md#route-vs-upstream-cors-enforcement) for the full rule table.
 
 ## Scenario A: route `sharing: inherit` — route wins wholesale, origins unioned
 

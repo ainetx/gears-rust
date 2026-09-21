@@ -129,7 +129,7 @@
               }
             },
             "required": [ "plugin_ref" ],
-            "description": "Plugin binding. The wire DTO (`PluginBinding` in oagw/src/api/rest/dto.rs) requires this object shape — a bare string or bare UUID array element does not deserialize."
+            "description": "Plugin binding. Must be an object with plugin_ref — a bare string or bare UUID array element is not a valid binding."
           },
           "description": "List of plugins applied to this upstream service, each an object binding a plugin_ref (builtin or custom) with optional config."
         }

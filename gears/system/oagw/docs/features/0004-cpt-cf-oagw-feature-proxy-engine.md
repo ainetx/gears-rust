@@ -90,7 +90,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
 - Auth plugin fails credential injection (401 AuthenticationFailed)
 - Guard plugin rejects request (4xx per guard rule)
 - Body validation fails (400 ValidationError or 400 PayloadTooLarge)
-- Upstream returns error response (passthrough as-is with `X-OAGW-Error-Source: upstream` — see `inst-proxy-31b`; not a gateway-fabricated `DownstreamError`)
+- Upstream returns error response (passthrough as-is with `X-OAGW-Error-Source: upstream` — see `inst-proxy-29b`; not a gateway-fabricated `DownstreamError`)
 - Upstream connection or request times out (504 ConnectionTimeout / RequestTimeout)
 - WebSocket upgrade requested — bridged bidirectionally; succeeds with `101 Switching Protocols` when the upstream also upgrades, otherwise OAGW propagates the upstream's own non-101 response (see [positive-14.1](../../scenarios/protocols/websocket/positive-14.1-websocket-upgrade-proxied.md) / [negative-14.8](../../scenarios/protocols/websocket/negative-14.8-websocket-upgrade-rejected-non-ws-upstream.md))
 - Pingora-level protocol error (503 ProtocolError, canonical `service_unavailable` — e.g. HTTP/2 downgrade failure)
@@ -102,59 +102,55 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
 **Steps**:
 1. [x] - `p1` - Actor sends `{METHOD} /api/oagw/v1/proxy/{alias}[/{path}][?{query}]` - `inst-proxy-1`
 2. [x] - `p1` - API: Extract `SecurityContext` (tenant_id, principal_id, permissions) from Bearer token - `inst-proxy-2`
-3. [x] - `p1` - **IF** token missing or invalid - `inst-proxy-3`
-   1. [x] - `p1` - **RETURN** 401 Unauthorized with `X-OAGW-Error-Source: gateway` - `inst-proxy-3a`
-4. [x] - `p1` - **IF** token lacks `gts.cf.core.oagw.proxy.v1~:invoke` permission - `inst-proxy-4`
-   1. [x] - `p1` - **RETURN** 403 Forbidden with `X-OAGW-Error-Source: gateway` - `inst-proxy-4a`
-5. [x] - `p1` - Invoke `DataPlaneService.execute_proxy(alias, path, method, headers, body, security_context)` - `inst-proxy-5`
-6. [x] - `p1` - Resolve upstream by alias via `cpt-cf-oagw-algo-alias-resolution` - `inst-proxy-6`
-7. [x] - `p1` - **IF** upstream not found - `inst-proxy-7`
-   1. [x] - `p1` - **RETURN** 404 RouteNotFound with `X-OAGW-Error-Source: gateway` - `inst-proxy-7a`
-8. [x] - `p1` - **IF** upstream disabled - `inst-proxy-8`
-   1. [x] - `p1` - **RETURN** 503 LinkUnavailable with `X-OAGW-Error-Source: gateway` - `inst-proxy-8a`
-9. [x] - `p1` - Match route via `cpt-cf-oagw-algo-route-matching` - `inst-proxy-9`
-10. [x] - `p1` - **IF** no matching route - `inst-proxy-10`
-    1. [x] - `p1` - **RETURN** 404 RouteNotFound with `X-OAGW-Error-Source: gateway` - `inst-proxy-10a`
-11. [x] - `p1` - Validate request body via `cpt-cf-oagw-algo-body-validation` - `inst-proxy-11`
-12. [x] - `p1` - **IF** body validation fails - `inst-proxy-12`
-    1. [x] - `p1` - **RETURN** 400 ValidationError or 400 PayloadTooLarge with `X-OAGW-Error-Source: gateway` - `inst-proxy-12a`
-13. [x] - `p1` - Compose plugin chain via `cpt-cf-oagw-algo-plugin-chain-execution` - `inst-proxy-13`
-14. [x] - `p1` - Execute auth plugin: inject credentials into outbound request - `inst-proxy-14`
-15. [x] - `p1` - **IF** auth plugin fails (secret not found, credential error) - `inst-proxy-15`
-    1. [x] - `p1` - **RETURN** 401 AuthenticationFailed or 500 SecretNotFound with `X-OAGW-Error-Source: gateway` - `inst-proxy-15a`
-16. [x] - `p1` - Execute guard plugins: validate method, query params, path suffix, CORS origin (actual requests only; preflight returns permissive 204 at handler level — see [ADR: CORS](../ADR/0006-cors.md)) - `inst-proxy-16`
-17. [x] - `p1` - **IF** any guard rejects - `inst-proxy-17`
-    1. [x] - `p1` - **RETURN** guard-specific error code with `X-OAGW-Error-Source: gateway` - `inst-proxy-17a`
-18. [x] - `p1` - Execute transform plugins: `on_request` phase — mutate outbound request - `inst-proxy-18`
-19. [x] - `p1` - Apply header transformation via `cpt-cf-oagw-algo-header-transformation` - `inst-proxy-19`
-20. [x] - `p1` - Select target endpoint via `X-OAGW-Target-Host` header or round-robin - `inst-proxy-20`
-21. [x] - `p1` - **IF** multi-endpoint upstream with common-suffix alias AND `X-OAGW-Target-Host` header missing - `inst-proxy-21`
-    1. [x] - `p1` - **RETURN** 400 MissingTargetHost with `X-OAGW-Error-Source: gateway` - `inst-proxy-21a`
-22. [x] - `p1` - **IF** `X-OAGW-Target-Host` present AND format invalid (not hostname or IP; contains port, path, or special chars) - `inst-proxy-22`
-    1. [x] - `p1` - **RETURN** 400 InvalidTargetHost with `X-OAGW-Error-Source: gateway` - `inst-proxy-22a`
-23. [x] - `p1` - **IF** `X-OAGW-Target-Host` present AND value does not match any configured endpoint host - `inst-proxy-23`
-    1. [x] - `p1` - **RETURN** 400 UnknownTargetHost with `X-OAGW-Error-Source: gateway` - `inst-proxy-23a`
-24. [x] - `p1` - **IF** request contains `Upgrade: websocket` header - `inst-proxy-24`
-    1. [x] - `p1` - Forward the upgrade handshake to the upstream via a bidirectional bridge - `inst-proxy-24a`
-    2. [x] - `p1` - **IF** upstream responds `101 Switching Protocols` - `inst-proxy-24b`
-       1. [x] - `p1` - Complete the upgrade and relay frames bidirectionally until either side closes - `inst-proxy-24b1`
-    3. [x] - `p1` - **ELSE** (upstream does not upgrade) - `inst-proxy-24c`
-       1. [x] - `p1` - Propagate the upstream's own non-101 response as-is - `inst-proxy-24c1`
-25. [x] - `p1` - Build outbound HTTP request: set target URL (scheme + host + port + path), method, headers, body - `inst-proxy-25`
-26. [x] - `p1` - Serialize request into in-memory duplex stream and forward to Pingora `ProxyHttp` engine via `cpt-cf-oagw-algo-pingora-bridge` - `inst-proxy-26`
-27. [x] - `p1` - **IF** Pingora reports upstream connection failure (refused, DNS, TLS) via `fail_to_proxy` - `inst-proxy-27`
-    1. [x] - `p1` - Map Pingora `ErrorType` to `DomainError` and write RFC 9457 Problem response with `X-OAGW-Error-Source: gateway` - `inst-proxy-27a`
-    2. [x] - `p1` - **RETURN** 503 DownstreamError (canonical `service_unavailable`) with `X-OAGW-Error-Source: gateway` - `inst-proxy-27b`
-28. [x] - `p1` - **IF** connection or request timeout (Pingora `ConnectTimedout`, `ReadTimedout`, `WriteTimedout`) - `inst-proxy-28`
-    1. [x] - `p1` - **RETURN** 504 ConnectionTimeout or RequestTimeout via `cpt-cf-oagw-algo-error-source-classification` - `inst-proxy-28a`
-29. [x] - `p1` - **IF** Pingora reports HTTP/2 error (`H2Error`, `H2Downgrade`) - `inst-proxy-29`
-    1. [x] - `p1` - **RETURN** 502 ProtocolError with `X-OAGW-Error-Source: gateway` - `inst-proxy-29a`
-30. [x] - `p1` - Parse upstream response from duplex stream read half - `inst-proxy-30`
-31. [x] - `p1` - **IF** upstream returns error response - `inst-proxy-31`
-    1. [x] - `p1` - Execute transform plugins: `on_error` phase - `inst-proxy-31a`
-    2. [x] - `p1` - **RETURN** upstream response as-is with `X-OAGW-Error-Source: upstream` - `inst-proxy-31b`
-32. [x] - `p1` - Execute transform plugins: `on_response` phase - `inst-proxy-32`
-33. [x] - `p1` - **RETURN** transformed response with `X-OAGW-Error-Source: upstream` - `inst-proxy-33`
+3. [x] - `p1` - Invoke `DataPlaneService.execute_proxy(alias, path, method, headers, body, security_context)` - `inst-proxy-3`
+4. [x] - `p1` - Resolve upstream by alias via `cpt-cf-oagw-algo-alias-resolution` - `inst-proxy-4`
+5. [x] - `p1` - **IF** upstream not found - `inst-proxy-5`
+   1. [x] - `p1` - **RETURN** 404 RouteNotFound with `X-OAGW-Error-Source: gateway` - `inst-proxy-5a`
+6. [x] - `p1` - **IF** upstream disabled - `inst-proxy-6`
+   1. [x] - `p1` - **RETURN** 503 LinkUnavailable with `X-OAGW-Error-Source: gateway` - `inst-proxy-6a`
+7. [x] - `p1` - Match route via `cpt-cf-oagw-algo-route-matching` - `inst-proxy-7`
+8. [x] - `p1` - **IF** no matching route - `inst-proxy-8`
+    1. [x] - `p1` - **RETURN** 404 RouteNotFound with `X-OAGW-Error-Source: gateway` - `inst-proxy-8a`
+9. [x] - `p1` - Validate request body via `cpt-cf-oagw-algo-body-validation` - `inst-proxy-9`
+10. [x] - `p1` - **IF** body validation fails - `inst-proxy-10`
+    1. [x] - `p1` - **RETURN** 400 ValidationError or 400 PayloadTooLarge with `X-OAGW-Error-Source: gateway` - `inst-proxy-10a`
+11. [x] - `p1` - Compose plugin chain via `cpt-cf-oagw-algo-plugin-chain-execution` - `inst-proxy-11`
+12. [x] - `p1` - Execute auth plugin: inject credentials into outbound request - `inst-proxy-12`
+13. [x] - `p1` - **IF** auth plugin fails (secret not found, credential error) - `inst-proxy-13`
+    1. [x] - `p1` - **RETURN** 401 AuthenticationFailed or 500 SecretNotFound with `X-OAGW-Error-Source: gateway` - `inst-proxy-13a`
+14. [x] - `p1` - Execute guard plugins: validate method, query params, path suffix, CORS origin (actual requests only; preflight returns permissive 204 at handler level — see [ADR: CORS](../ADR/0006-cors.md)) - `inst-proxy-14`
+15. [x] - `p1` - **IF** any guard rejects - `inst-proxy-15`
+    1. [x] - `p1` - **RETURN** guard-specific error code with `X-OAGW-Error-Source: gateway` - `inst-proxy-15a`
+16. [x] - `p1` - Execute transform plugins: `on_request` phase — mutate outbound request - `inst-proxy-16`
+17. [x] - `p1` - Apply header transformation via `cpt-cf-oagw-algo-header-transformation` - `inst-proxy-17`
+18. [x] - `p1` - Select target endpoint via `X-OAGW-Target-Host` header or round-robin - `inst-proxy-18`
+19. [x] - `p1` - **IF** multi-endpoint upstream with common-suffix alias AND `X-OAGW-Target-Host` header missing - `inst-proxy-19`
+    1. [x] - `p1` - **RETURN** 400 MissingTargetHost with `X-OAGW-Error-Source: gateway` - `inst-proxy-19a`
+20. [x] - `p1` - **IF** `X-OAGW-Target-Host` present AND format invalid (not hostname or IP; contains port, path, or special chars) - `inst-proxy-20`
+    1. [x] - `p1` - **RETURN** 400 InvalidTargetHost with `X-OAGW-Error-Source: gateway` - `inst-proxy-20a`
+21. [x] - `p1` - **IF** `X-OAGW-Target-Host` present AND value does not match any configured endpoint host - `inst-proxy-21`
+    1. [x] - `p1` - **RETURN** 400 UnknownTargetHost with `X-OAGW-Error-Source: gateway` - `inst-proxy-21a`
+22. [x] - `p1` - **IF** request contains `Upgrade: websocket` header - `inst-proxy-22`
+    1. [x] - `p1` - Forward the upgrade handshake to the upstream via a bidirectional bridge - `inst-proxy-22a`
+    2. [x] - `p1` - **IF** upstream responds `101 Switching Protocols` - `inst-proxy-22b`
+       1. [x] - `p1` - Complete the upgrade and relay frames bidirectionally until either side closes - `inst-proxy-22b1`
+    3. [x] - `p1` - **ELSE** (upstream does not upgrade) - `inst-proxy-22c`
+       1. [x] - `p1` - Propagate the upstream's own non-101 response as-is - `inst-proxy-22c1`
+23. [x] - `p1` - Build outbound HTTP request: set target URL (scheme + host + port + path), method, headers, body - `inst-proxy-23`
+24. [x] - `p1` - Serialize request into in-memory duplex stream and forward to Pingora `ProxyHttp` engine via `cpt-cf-oagw-algo-pingora-bridge` - `inst-proxy-24`
+25. [x] - `p1` - **IF** Pingora reports upstream connection failure (refused, DNS, TLS) via `fail_to_proxy` - `inst-proxy-25`
+    1. [x] - `p1` - Map Pingora `ErrorType` to `DomainError` and write RFC 9457 Problem response with `X-OAGW-Error-Source: gateway` - `inst-proxy-25a`
+    2. [x] - `p1` - **RETURN** 503 DownstreamError (canonical `service_unavailable`) with `X-OAGW-Error-Source: gateway` - `inst-proxy-25b`
+26. [x] - `p1` - **IF** connection or request timeout (Pingora `ConnectTimedout`, `ReadTimedout`, `WriteTimedout`) - `inst-proxy-26`
+    1. [x] - `p1` - **RETURN** 504 ConnectionTimeout or RequestTimeout via `cpt-cf-oagw-algo-error-source-classification` - `inst-proxy-26a`
+27. [x] - `p1` - **IF** Pingora reports HTTP/2 error (`H2Error`, `H2Downgrade`) - `inst-proxy-27`
+    1. [x] - `p1` - **RETURN** 503 ProtocolError (canonical `service_unavailable`) with `X-OAGW-Error-Source: gateway` - `inst-proxy-27a`
+28. [x] - `p1` - Parse upstream response from duplex stream read half - `inst-proxy-28`
+29. [x] - `p1` - **IF** upstream returns error response - `inst-proxy-29`
+    1. [x] - `p1` - Execute transform plugins: `on_error` phase - `inst-proxy-29a`
+    2. [x] - `p1` - **RETURN** upstream response as-is with `X-OAGW-Error-Source: upstream` - `inst-proxy-29b`
+30. [x] - `p1` - Execute transform plugins: `on_response` phase - `inst-proxy-30`
+31. [x] - `p1` - **RETURN** transformed response with `X-OAGW-Error-Source: upstream` - `inst-proxy-31`
 
 ## 3. Processes / Business Logic (CDSL)
 
@@ -485,7 +481,7 @@ Credential isolation is enforced by resolving secrets from `cred_store` at reque
 - **States section**: Not applicable — proxy engine is a stateless request-response flow. Circuit breaker state management belongs to `cpt-cf-oagw-feature-rate-limiting`.
 - **Multi-tenant hierarchy merge**: Out of scope — hierarchical config override and sharing mode merge strategies belong to cpt-cf-oagw-feature-tenant-hierarchy.
 - **Rate limiting enforcement**: Out of scope — rate limiting and circuit breaker during proxy flow belong to `cpt-cf-oagw-feature-rate-limiting`.
-- **SSE/WebTransport streaming**: Out of scope — streaming protocol support belongs to `cpt-cf-oagw-feature-streaming`. **WebSocket upgrade is in scope for this feature and is bridged bidirectionally** (see step `inst-proxy-24` above) — it is not rejected; it succeeds end-to-end whenever the upstream itself completes the handshake.
+- **SSE/WebTransport streaming**: Out of scope — streaming protocol support belongs to `cpt-cf-oagw-feature-streaming`. **WebSocket upgrade is in scope for this feature and is bridged bidirectionally** (see step `inst-proxy-22` above) — it is not rejected; it succeeds end-to-end whenever the upstream itself completes the handshake.
 - **Metrics and audit logging**: Out of scope — Prometheus metrics, structured logging, and CORS handling belong to `cpt-cf-oagw-feature-observability`.
 - **UX/Accessibility**: Not applicable — OAGW is a backend API gear with no user interface.
 - **Compliance/Privacy**: OAGW does not handle PII directly. Credential isolation via `cred_store` references covers data protection. No additional regulatory compliance beyond standard platform requirements.
