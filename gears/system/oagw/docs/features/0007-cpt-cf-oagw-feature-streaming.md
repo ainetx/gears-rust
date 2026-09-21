@@ -120,7 +120,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-https-only`.
 - Close frames propagated cleanly in both directions
 
 **Error Scenarios**:
-- Upstream does not upgrade (non-101 response) — OAGW returns a gateway-fabricated `503 Service Unavailable` (`ProtocolError`), discarding the upstream's real status and body
+- Upstream returns a non-101 response to a WebSocket upgrade request — OAGW returns `503 Service Unavailable` (`ProtocolError`) as an RFC 9457 Problem Details response (`application/problem+json`) with `X-OAGW-Error-Source: gateway`; the upstream's real status and body are discarded, not passed through
 - Upstream connection drops during session (502 StreamAborted)
 - Idle timeout on WebSocket session (504 IdleTimeout)
 - Auth/guard failures before upgrade (same as base proxy flow)
