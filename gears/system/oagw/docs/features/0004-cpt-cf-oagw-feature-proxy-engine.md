@@ -92,7 +92,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
 - Body validation fails (400 ValidationError or 400 PayloadTooLarge)
 - Upstream returns error response (passthrough as-is with `X-OAGW-Error-Source: upstream` — see `inst-proxy-29b`; not a gateway-fabricated `DownstreamError`)
 - Upstream connection or request times out (504 ConnectionTimeout / RequestTimeout)
-- WebSocket upgrade requested — bridged bidirectionally; succeeds with `101 Switching Protocols` when the upstream also upgrades, otherwise OAGW propagates the upstream's own non-101 response (see [positive-14.1](../../scenarios/protocols/websocket/positive-14.1-websocket-upgrade-proxied.md) / [negative-14.8](../../scenarios/protocols/websocket/negative-14.8-websocket-upgrade-rejected-non-ws-upstream.md))
+- WebSocket upgrade requested — bridged bidirectionally; succeeds with `101 Switching Protocols` when the upstream also upgrades, otherwise OAGW returns a gateway-fabricated `503 Service Unavailable` (`ProtocolError`), discarding the upstream's real non-101 status and body (see [positive-14.1](../../scenarios/protocols/websocket/positive-14.1-websocket-upgrade-proxied.md) / [negative-14.8](../../scenarios/protocols/websocket/negative-14.8-websocket-upgrade-rejected-non-ws-upstream.md))
 - Pingora-level protocol error (503 ProtocolError, canonical `service_unavailable` — e.g. HTTP/2 downgrade failure)
 - X-OAGW-Target-Host missing for multi-endpoint common-suffix upstream (400 MissingTargetHost)
 - X-OAGW-Target-Host format invalid (400 InvalidTargetHost)
@@ -135,7 +135,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
     2. [x] - `p1` - **IF** upstream responds `101 Switching Protocols` - `inst-proxy-22b`
        1. [x] - `p1` - Complete the upgrade and relay frames bidirectionally until either side closes - `inst-proxy-22b1`
     3. [x] - `p1` - **ELSE** (upstream does not upgrade) - `inst-proxy-22c`
-       1. [x] - `p1` - Propagate the upstream's own non-101 response as-is - `inst-proxy-22c1`
+       1. [x] - `p1` - Return a gateway-fabricated `503 Service Unavailable` (`ProtocolError`) — the upstream's real non-101 status and body are discarded, not propagated - `inst-proxy-22c1`
 23. [x] - `p1` - Build outbound HTTP request: set target URL (scheme + host + port + path), method, headers, body - `inst-proxy-23`
 24. [x] - `p1` - Serialize request into in-memory duplex stream and forward to Pingora `ProxyHttp` engine via `cpt-cf-oagw-algo-pingora-bridge` - `inst-proxy-24`
 25. [x] - `p1` - **IF** Pingora reports upstream connection failure (refused, DNS, TLS) via `fail_to_proxy` - `inst-proxy-25`
@@ -457,7 +457,7 @@ Pingora-level errors are handled by the `fail_to_proxy` callback, which **MUST**
 - [x] Upstream connection failures (refused, DNS, TLS) return 503 DownstreamError (canonical `service_unavailable`) with `X-OAGW-Error-Source: gateway`
 - [x] No credentials appear in logs, error messages, or API responses
 - [x] Application layer does not add retries; only Pingora's built-in connection-level retry (up to 1 retry on reusable connections) is permitted
-- [x] WebSocket upgrade requests (`Upgrade: websocket`) are bridged bidirectionally: `101 Switching Protocols` when the upstream upgrades, otherwise the upstream's own non-101 response is propagated
+- [x] WebSocket upgrade requests (`Upgrade: websocket`) are bridged bidirectionally: `101 Switching Protocols` when the upstream upgrades, otherwise a gateway-fabricated `503 Service Unavailable` (`ProtocolError`) is returned and the upstream's real non-101 status/body are discarded
 - [x] Pingora `fail_to_proxy` errors produce RFC 9457 Problem Details body with GTS type identifiers and `X-OAGW-Error-Source: gateway`
 - [x] When `X-OAGW-Error-Source` is absent (normal upstream response after `upstream_response_filter` strips `x-oagw-*` headers), `ErrorSource` defaults to `Upstream`; Pingora-generated error responses (`fail_to_proxy`) always set `X-OAGW-Error-Source: gateway` explicitly
 

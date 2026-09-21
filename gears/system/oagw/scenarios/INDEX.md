@@ -784,7 +784,7 @@ Full integration walkthroughs — each demonstrates the complete journey (upstre
 
 #### WebSocket upgrade rejected for non-WebSocket upstream endpoint
 - **Scenario**: [negative-14.8-websocket-upgrade-rejected-non-ws-upstream.md](protocols/websocket/negative-14.8-websocket-upgrade-rejected-non-ws-upstream.md)
-- **What happens**: Upgrading against a route that isn't a WS endpoint on the upstream fails with the upstream's actual non-`101` response, propagated as-is.
+- **What happens**: Upgrading against a route that isn't a WS endpoint on the upstream fails with a gateway-fabricated `503 Service Unavailable` (`ProtocolError`) — the upstream's real non-`101` response is discarded, not propagated.
 
 ---
 

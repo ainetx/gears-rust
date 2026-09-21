@@ -723,7 +723,7 @@ All gateway errors follow RFC 9457 Problem Details (`application/problem+json`).
 | UnknownTargetHost | 400 | `gts.cf.core.errors.err.v1~cf.core.err.invalid_argument.v1` | `cf.core.oagw.proxy.v1~` | No | X-OAGW-Target-Host value does not match any configured endpoint |
 | PayloadTooLarge | 400 | `gts.cf.core.errors.err.v1~cf.core.err.out_of_range.v1` | `cf.core.oagw.proxy.v1~` | No | Request payload exceeds limit (moved off `413`) |
 | AuthenticationFailed | 401 | `gts.cf.core.errors.err.v1~cf.core.err.unauthenticated.v1` | none (constructed directly, no resource scope) | No | Authentication to upstream failed |
-| PermissionDenied | 403 | `gts.cf.core.errors.err.v1~cf.core.err.permission_denied.v1` | `cf.core.oagw.proxy.v1~` (or none, depending on call site) | No | AuthZ denied the resolved identity (e.g. nil-tenant token) |
+| PermissionDenied | 403 | `gts.cf.core.errors.err.v1~cf.core.err.permission_denied.v1` | `cf.core.oagw.proxy.v1~` (CORS/generic authorization denials) or `cf.core.oagw.guard_plugin.v1~` (guard plugin rejects with a 403) | No | AuthZ denied the resolved identity (e.g. nil-tenant token) |
 | RouteNotFound | 404 | `gts.cf.core.errors.err.v1~cf.core.err.not_found.v1` | `cf.core.oagw.route.v1~` | No | No matching route found |
 | PluginInUse | 409 | `gts.cf.core.errors.err.v1~cf.core.err.already_exists.v1` | varies by plugin kind (`auth_plugin`/`guard_plugin`/`transform_plugin`/`proxy`) | No | Plugin in use. Same reachability caveat as `PluginNotFound` above — no `/plugins` DELETE route is registered today. |
 | RateLimitExceeded | 429 | `gts.cf.core.errors.err.v1~cf.core.err.resource_exhausted.v1` | `cf.core.oagw.proxy.v1~` | Yes | Rate limit exceeded |

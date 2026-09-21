@@ -120,7 +120,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-https-only`.
 - Close frames propagated cleanly in both directions
 
 **Error Scenarios**:
-- Upstream does not upgrade (non-101 response) — OAGW passes through the upstream's actual response as-is
+- Upstream does not upgrade (non-101 response) — OAGW returns a gateway-fabricated `503 Service Unavailable` (`ProtocolError`), discarding the upstream's real status and body
 - Upstream connection drops during session (502 StreamAborted)
 - Idle timeout on WebSocket session (504 IdleTimeout)
 - Auth/guard failures before upgrade (same as base proxy flow)
@@ -132,7 +132,7 @@ Design constraints enforced: `cpt-cf-oagw-constraint-https-only`.
 4. [x] - `p1` - **IF** upstream accepts upgrade (101 Switching Protocols) - `inst-ws-4`
    1. [x] - `p1` - Complete upgrade with caller (101 Switching Protocols) - `inst-ws-4a`
 5. [x] - `p1` - **ELSE** (upstream rejects upgrade) - `inst-ws-5`
-   1. [x] - `p1` - Return the upstream's own non-101 response as-is with `X-OAGW-Error-Source: upstream` — not a gateway-fabricated error (see `cpt-cf-oagw-feature-proxy-engine` `inst-proxy-24c`/`inst-proxy-24c1`, which now owns this branch) - `inst-ws-5a`
+   1. [x] - `p1` - Return a gateway-fabricated `503 Service Unavailable` (`ProtocolError`) with `X-OAGW-Error-Source: gateway` — the upstream's real non-101 status and body are discarded, not propagated (see `cpt-cf-oagw-feature-proxy-engine` `inst-proxy-22c`/`inst-proxy-22c1`, which owns this branch) - `inst-ws-5a`
 6. [x] - `p1` - **FOR EACH** message from caller - `inst-ws-6`
    1. [x] - `p1` - Relay bytes to upstream verbatim — frames are never parsed, so opcode, masking, RSV bits and fragmentation are preserved by construction, and no per-message size limit is applied - `inst-ws-6b`
 7. [x] - `p1` - **FOR EACH** message from upstream - `inst-ws-7`
@@ -269,7 +269,7 @@ The system **MUST** detect SSE responses (`Content-Type: text/event-stream`) fro
 
 - [x] `p1` - **ID**: `cpt-cf-oagw-dod-websocket-streaming`
 
-The system **MUST** handle HTTP Upgrade (`Upgrade: websocket`) by negotiating the WebSocket handshake with both the caller and upstream. After the 101 the connection **MUST** be relayed as an opaque byte stream: frames are not parsed, so opcodes, masking, RSV bits and fragmentation are preserved verbatim, and no per-message or per-frame size limit is enforced. Close frames originated by a peer **MUST** be propagated with status code and reason; Close frame reason strings the gateway itself originates **MUST NOT** include internal gateway details (use standard WebSocket status codes only). The system **MUST** handle unexpected disconnects by propagating them as a half-close rather than a synthesised frame: an upstream drop leaves the caller observing EOF (its stack reports 1006 Abnormal Closure), and a caller drop reaches upstream as EOF. The gateway **MUST** originate Close 1001 (Going Away) toward both sides on idle timeout and on graceful shutdown, announcing to each side independently under its own `websocket_close_timeout_secs` budget so an unresponsive peer cannot suppress the other side's close. Auth and guard plugins **MUST** execute before the upgrade handshake. Transform plugins are NOT executed on individual WebSocket frames. When the upstream does not upgrade, its own non-101 response **MUST** be propagated as-is with `X-OAGW-Error-Source: upstream` (owned by `cpt-cf-oagw-feature-proxy-engine`'s WebSocket-upgrade handling, not fabricated here).
+The system **MUST** handle HTTP Upgrade (`Upgrade: websocket`) by negotiating the WebSocket handshake with both the caller and upstream. After the 101 the connection **MUST** be relayed as an opaque byte stream: frames are not parsed, so opcodes, masking, RSV bits and fragmentation are preserved verbatim, and no per-message or per-frame size limit is enforced. Close frames originated by a peer **MUST** be propagated with status code and reason; Close frame reason strings the gateway itself originates **MUST NOT** include internal gateway details (use standard WebSocket status codes only). The system **MUST** handle unexpected disconnects by propagating them as a half-close rather than a synthesised frame: an upstream drop leaves the caller observing EOF (its stack reports 1006 Abnormal Closure), and a caller drop reaches upstream as EOF. The gateway **MUST** originate Close 1001 (Going Away) toward both sides on idle timeout and on graceful shutdown, announcing to each side independently under its own `websocket_close_timeout_secs` budget so an unresponsive peer cannot suppress the other side's close. Auth and guard plugins **MUST** execute before the upgrade handshake. Transform plugins are NOT executed on individual WebSocket frames. When the upstream does not upgrade, the system **MUST** return a gateway-fabricated `503 Service Unavailable` (`ProtocolError`) with `X-OAGW-Error-Source: gateway`, discarding the upstream's real non-101 status and body (owned by `cpt-cf-oagw-feature-proxy-engine`'s WebSocket-upgrade handling).
 
 **Implements**:
 - `cpt-cf-oagw-flow-streaming-websocket`
@@ -318,7 +318,7 @@ The system **MUST** implement adaptive per-host HTTP version detection using ALP
 - [x] Upstream WebSocket drop half-closes the caller's leg, so the caller sees EOF and reports 1006 Abnormal Closure itself
 - [x] Caller WebSocket disconnect propagates to upstream as a TCP half-close (EOF), without a synthesised Close frame
 - [x] Idle timeout on WebSocket session sends 1001 Going Away to both sides
-- [x] Upstream's own non-101 response is propagated as-is with `X-OAGW-Error-Source: upstream` when it does not upgrade
+- [x] A gateway-fabricated `503 Service Unavailable` (`ProtocolError`) with `X-OAGW-Error-Source: gateway` is returned when the upstream does not upgrade, discarding the upstream's real non-101 status and body
 - [x] Transform plugins are NOT executed on individual WebSocket frames
 - [x] Auth and guard plugins execute before any streaming upgrade/session establishment
 - [ ] WebTransport session establishment requires HTTP/2 (verified via ALPN); failure returns 502 ProtocolError
