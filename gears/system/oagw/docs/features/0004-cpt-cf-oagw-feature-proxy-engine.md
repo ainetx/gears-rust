@@ -133,10 +133,10 @@ Design constraints enforced: `cpt-cf-oagw-constraint-body-limit`, `cpt-cf-oagw-c
 22. [x] - `p1` - **IF** request contains `Upgrade: websocket` header - `inst-proxy-22`
     1. [x] - `p1` - Forward the upgrade handshake to the upstream via a bidirectional bridge - `inst-proxy-22a`
     2. [x] - `p1` - **IF** upstream responds `101 Switching Protocols` - `inst-proxy-22b`
-       1. [x] - `p1` - Complete the upgrade and relay frames bidirectionally until either side closes - `inst-proxy-22b1`
+       1. [x] - `p1` - Complete the upgrade and relay frames bidirectionally until either side closes — terminal; steps 23+ do not run for this request - `inst-proxy-22b1`
     3. [x] - `p1` - **ELSE** (upstream does not upgrade) - `inst-proxy-22c`
-       1. [x] - `p1` - Return a gateway-fabricated `503 Service Unavailable` (`ProtocolError`) — the upstream's real non-101 status and body are discarded, not propagated - `inst-proxy-22c1`
-23. [x] - `p1` - Build outbound HTTP request: set target URL (scheme + host + port + path), method, headers, body - `inst-proxy-23`
+       1. [x] - `p1` - Return a gateway-fabricated `503 Service Unavailable` (`ProtocolError`) — the upstream's real non-101 status and body are discarded, not propagated; terminal, steps 23+ do not run for this request - `inst-proxy-22c1`
+23. [x] - `p1` - Build outbound HTTP request: set target URL (scheme + host + port + path), method, headers, body — only reached for non-WebSocket requests, since step 22 is terminal for `Upgrade: websocket` requests - `inst-proxy-23`
 24. [x] - `p1` - Serialize request into in-memory duplex stream and forward to Pingora `ProxyHttp` engine via `cpt-cf-oagw-algo-pingora-bridge` - `inst-proxy-24`
 25. [x] - `p1` - **IF** Pingora reports upstream connection failure (refused, DNS, TLS) via `fail_to_proxy` - `inst-proxy-25`
     1. [x] - `p1` - Map Pingora `ErrorType` to `DomainError` and write RFC 9457 Problem response with `X-OAGW-Error-Source: gateway` - `inst-proxy-25a`
