@@ -638,7 +638,7 @@ Authorization checks:
 
 IDs use anonymous GTS identifiers: `gts.cf.core.oagw.{type}.v1~{uuid}`. Plugins are immutable (no PUT). DELETE returns `409 PluginInUse` when referenced.
 
-**Reachability note**: the five `/api/oagw/v1/plugins*` routes above are not a routing-only gap — the whole feature stack is unbuilt. `api/rest/routes/mod.rs` wires only `proxy`/`route`/`upstream` (no `plugin` module); `api/rest/handlers/` has no `plugin.rs`; `domain/repo.rs` defines `UpstreamRepository`/`RouteRepository` but no `PluginRepository`; and `ControlPlaneServiceImpl` (`domain/services/management/mod.rs`) holds only `upstreams`/`routes` repositories, with no plugin CRUD methods anywhere on the `ControlPlaneService` trait. `DomainError::PluginNotFound`/`PluginInUse` and their canonical-conversion logic exist, but nothing in the current codebase constructs or reaches them — treat this as a fully unimplemented feature (storage, service layer, handlers, routing), not a missing `router.route(...)` call.
+**Reachability note**: the five `/api/oagw/v1/plugins*` routes above are not a routing-only gap — the whole feature stack is unbuilt. No route for any of them is registered; no request handler for plugins exists; the control-plane's repository layer has no plugin repository (only upstream and route repositories); and the control-plane service has no plugin CRUD methods. `DomainError::PluginNotFound`/`PluginInUse` and their canonical-conversion logic exist, but nothing in the current codebase constructs or reaches them — treat this as a fully unimplemented feature (storage, service layer, handlers, routing), not a missing route registration.
 
 #### CRUD Semantics
 
