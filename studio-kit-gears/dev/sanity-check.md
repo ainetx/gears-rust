@@ -31,23 +31,25 @@ pass/fail table in "Reporting" below.
 
 ## Scenario 1 — Repo-wide `{variable}` citations resolve to real, matching content
 
-> Run `cfs resolve-vars --kit gears --flat` from `<WORKTREE_PATH>`. For each of these 17
+> Run `cfs resolve-vars --kit gears --flat` from `<WORKTREE_PATH>`. For each of these 18
 > variables — `{gears_md}`, `{architecture_manifest}`, `{toolkit_unified_system}`,
 > `{toolkit_pr_review_docs}`, `{repo_adrs}`, `{repo_arch}`, `{repo_playbook}`,
 > `{guidelines_security}`, `{guidelines_dependencies}`, `{guidelines_gts}`, `{dna_rust}`,
 > `{dna_rest}`, `{iso_29148}`, `{testing_policy}`, `{fips_requirements}`,
-> `{gears_security}`, `{ensure_dna_script}` — confirm it resolves to a real path, open
-> the resolved file/directory, and judge whether the real content genuinely supports
-> what cites it in `studio-kit-gears/codebase/{rules.md,design-led-rules.md,checklist.md}`
-> and `studio-kit-gears/artifacts/*/{rules.md,checklist.md}`. Flag any `{var}` that fails
+> `{gears_security}`, `{ensure_dna_script}`, `{e2e_guide}` — confirm it resolves to a real
+> path, open the resolved file/directory, and judge whether the real content genuinely
+> supports what cites it in
+> `studio-kit-gears/codebase/{rules.md,design-led-rules.md,checklist.md}` and
+> `studio-kit-gears/artifacts/*/{rules.md,checklist.md}`. Flag any `{var}` that fails
 > to resolve, any mismatch between a citation's claim and the real content, or any
 > redundancy between two variables (e.g. check `{gears_security}` vs
 > `{guidelines_security}`, and `{repo_playbook}` vs `{gears_md}`, specifically — these
 > were previously confirmed distinct, confirm that's still true). Report pass/fail per
 > variable, under 350 words total.
 
-**Expected**: all 17 PASS, no broken resolution, no redundancy between the two named
-pairs. (Last confirmed: all PASS, see PR #5326.)
+**Expected**: all 18 PASS, no broken resolution, no redundancy between the two named
+pairs. (Last confirmed: 17/17 PASS, see PR #5326; `{e2e_guide}` added after that run —
+re-confirm it specifically on the next pass.)
 
 ## Scenario 2 — `ensure-dna.py`, all 3 real install states
 
@@ -76,15 +78,18 @@ copy-mode installs — Scenario 3 covers that case.)
 > gears` (add `--force --approve-overwrite scripts --approve-overwrite
 > ensure_dna_script` plus any other resource ids it names as changed, if this isn't the
 > first install there). Then run `cfs resolve-vars --kit gears --flat` from that scratch
-> directory and confirm every one of the 17 variables in Scenario 1, plus
+> directory and confirm every one of the 18 variables in Scenario 1, plus
 > `{workflow_toolkit_review}` and `{workflow_gear_creator}`, now resolves to a path under
 > `.cf-studio/config/kits/gears/...` (NOT back into `<WORKTREE_PATH>`), and that the file
 > at that resolved path actually exists with non-trivial size (not a 0-byte stub). Report
-> a pass/fail table of all 19 resolved paths plus their byte sizes. Under 300 words.
+> a pass/fail table of all 20 resolved paths plus their byte sizes. Under 300 words.
 
-**Expected**: all 19 resolve under the scratch install's own `.cf-studio/`, all non-trivial
-size. (Last confirmed for the first 17: PR #5326; `{workflow_toolkit_review}` and
-`{workflow_gear_creator}` were added later in the same PR — re-confirm both here.)
+**Expected**: all 20 resolve under the scratch install's own `.cf-studio/`, all non-trivial
+size. (Last confirmed for the first 17 of the then-19: PR #5326; `{workflow_toolkit_review}`
+and `{workflow_gear_creator}` were confirmed in that same PR, `{e2e_guide}` was added after
+— re-confirm it specifically under copy-mode, since `ensure-dna.py`'s own copy-mode
+path-resolution bug (Scenario 2) shows this install mode is exactly where a resource's
+`install_path` can silently diverge from where an agent expects to find it.)
 
 ## Scenario 4 — `toolkit-pr-review` skill, live, pinned PR
 
@@ -221,6 +226,47 @@ comes back.)
 **Expected**: 0 errors, exactly 8 warnings at the known locations, `constraints`
 immediately before the artifacts bindings. (Last confirmed: PR #5326.)
 
+## Scenario 11 — Full-chapter and `docs/arch` citation coverage (the "what did we miss"
+check)
+
+> This scenario exists because the kit's own citation mechanism was twice found to be
+> silently incomplete — not broken, just never extended to cover everything it should
+> have (see PR #5326's history: #5301's original finding, then a chapter-routing gap, then
+> a `docs/arch` gap, each found only because someone asked "are we sure we didn't miss
+> anything" rather than trusting the previous pass). Treat this as the standing check for
+> a regression of that same failure mode, not a one-off.
+>
+> **Part A — `docs/toolkit_unified_system` full coverage**: list every file in
+> `docs/toolkit_unified_system/` (expect `00` through `14` plus `16`, no `15`, plus
+> `README.md`). For each content chapter, `grep -rl` its basename (without extension)
+> across `studio-kit-gears/*.md`, `studio-kit-gears/codebase/*.md`,
+> `studio-kit-gears/artifacts/*/*.md`, and `studio-kit-gears/workflows/*.md` (exclude
+> `studio-kit-gears/dev/sanity-check.md` itself). Every chapter must appear at least once;
+> `16_defect_class_to_control_map.md` is expected to appear ONLY from
+> `codebase/checklist.md` (review-stage-only is correct for it, not a gap). Report any
+> chapter with zero hits.
+> **Part B — `docs/arch` subsystem coverage of what the kit already asserts**: read
+> `studio-kit-gears/codebase/rules.md`'s and `design-led-rules.md`'s `{repo_arch}`
+> Structural bullet (the one naming `errors/`, `authorization/`, `toolkit-oop/`,
+> `toolkit-contract-binding/`, `database/TRADEOFFS.md`, `throttling/DESIGN.md`). Confirm
+> every path segment it names still exists on disk at the stated location, then
+> hand-trace the same two scenarios already confirmed once (don't invent new ones): (i) a
+> FEATURE slice adding a new "failed precondition"-style wire error — confirm
+> `docs/arch/errors/categories/09-failed-precondition.md` is still the file that matches,
+> and that the bullet's wording still points specifically at `errors/categories/` and not
+> a vaguer "errors/" reference; (ii) a new out-of-process/gRPC gear — confirm
+> `docs/toolkit_unified_system/09_oop_grpc_sdk_pattern.md` still has zero `docs/arch/`
+> links of its own (i.e. the kit bullet is still the only route there, not a now-redundant
+> duplicate of something the chapter started linking itself). Report pass/fail for both
+> parts, under 350 words.
+
+**Expected**: Part A — every chapter ≥1 hit, `16` only from `checklist.md`. Part B — all
+named paths exist, both scenarios still PASS, chapter `09` still has 0 internal
+`docs/arch/` links (if it ever gains one, the kit bullet's `toolkit-oop`/
+`toolkit-contract-binding` clause may need re-checking for redundancy, not automatically
+removed). (Last confirmed: this session, pre-commit for PR #5326's third commit — see that
+PR's "Tested" section for the two cold-read sub-agent reports this scenario condenses.)
+
 ---
 
 ## Reporting
@@ -239,6 +285,7 @@ Collect every scenario's agent result into one table:
 | 8 | Smart CI routing (4 traces) | | |
 | 9 | GearsCodeChainSweep (4 traces + routing) | | |
 | 10 | Manifest structural integrity | | |
+| 11 | Full-chapter + `docs/arch` citation coverage | | |
 
 Any scenario that regresses from its "Expected" line is a real regression in the kit,
 not a test-flake — these scenarios are all deterministic by construction (pinned PRs,
