@@ -138,6 +138,18 @@ guarantees are merge-blocking. Missing rationale or review owner is
 merge-blocking when the PR introduces or relies on a shared-baseline deviation
 or changes a guarded security/registry boundary without a review record.
 
+c3. **Rust / ToolKit framework compliance pass**
+When the PR touches Rust code, run `cf-gears-toolkit-review` in local mode against
+`<branch>` (the PR's branch) to get idiomatic-Rust and ToolKit-framework findings from its
+dedicated rule modules (architecture, async, design, errors, security, tests, toolkit).
+That workflow owns invoking the underlying `toolkit-pr-review` skill (or its rule-module
+fallback when the skill isn't installed) — this step never calls either directly, so the
+capability has one owner. Use its findings to populate the **Correctness**, **Cargo /
+Clippy / Architecture Lints / Rustfmt Conformance**, **Code Style & Idiomatic Patterns**,
+**Performance**, **Test Coverage**, and **Security** sections of the review output
+(step 4e) instead of deriving them ad hoc — this workflow's own checklist is
+SDLC-traceability-focused and does not define Rust/ToolKit conformance criteria.
+
 d. **Review the changes (read-only)**
 Read `.prs/{ID}/diff.patch` to understand what changed.
 For each affected file, open the **current version in the repo** and
@@ -176,6 +188,7 @@ most attention.
 - [ ] Diff parsed and scope of changes understood
 - [ ] Architecture pass completed before per-file review (step 4b)
 - [ ] Shared Gears guardrail pass completed before per-file review (step 4c2)
+- [ ] Rust / ToolKit framework compliance pass completed when the PR touches Rust code (step 4c3)
 - [ ] Architecture section present in review output (even if empty / "no issues")
 - [ ] Existing reviewer feedback analyzed
 - [ ] Review covers all areas from prompt and checklist

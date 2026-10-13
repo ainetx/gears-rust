@@ -70,10 +70,16 @@ These checks are **Constructor Studio SDLC-specific** because they require Const
 
 - [ ] Verify each requirement in Definition of Done is implemented and testable
 - [ ] Confirm implementation details (API, DB, domain entities) match the requirement section
-- [ ] If the implementation introduces or changes GTS identifiers, type schemas, well-known instances, discriminator/const-enum-like values, `x-gts-traits` / `x-gts-traits-schema`, or type-driven authorization/extension behavior, review against `guidelines/GTS.md`
+- [ ] If the implementation introduces or changes GTS identifiers, type schemas, well-known instances, discriminator/const-enum-like values, `x-gts-traits` / `x-gts-traits-schema`, or type-driven authorization/extension behavior, review against `{guidelines_gts}`
 - [ ] Validate requirement mappings to flows and algorithms are satisfied
 - [ ] Ensure PRD coverage (FR/NFR) is preserved in implementation outcomes
 - [ ] Ensure Design coverage (principles, constraints, components, sequences, db tables) is satisfied
+
+### SEM-CODE-006b: Idiomatic Rust / ToolKit Framework Conformance
+**Severity**: HIGH
+
+- [ ] Apply `{toolkit_pr_review_docs}/RULES.md` and `{toolkit_pr_review_docs}/rules/*.md` for idiomatic-Rust and ToolKit-framework conformance (architecture, async/concurrency, design/API, errors/panics, security, tests, framework compliance) — neither the generic Studio code checklist nor the SDLC semantic checks above cover this
+- [ ] When reviewing a full PR diff, prefer running `cf-gears-toolkit-review` (local or PR mode) over re-deriving these findings ad hoc — it owns invoking the underlying `toolkit-pr-review` skill and its rule-module fallback, so this capability has one owner instead of being re-derived per caller
 
 ### SEM-CODE-007: Overall Design Consistency
 **Severity**: HIGH
@@ -91,8 +97,8 @@ These checks are **Constructor Studio SDLC-specific** because they require Const
 - [ ] Confirm HTTP routes use the canonical OperationBuilder/operation-registration path, not ad hoc route wiring
 - [ ] Confirm HTTP-facing errors use the canonical Problem/RFC-9457 shape and do not expose stack traces, secrets, internal diagnostics, or implementation-only identifiers
 - [ ] Confirm tenant, identity, authorization, and security context boundaries are preserved for security-sensitive code paths
-- [ ] Confirm registry/autodetect/ignore, secrets, FIPS, privilege-boundary, and security-boundary changes have a review record naming the guardrail or deviation, rationale, owner, and validation performed
-- [ ] If the design relies on GTS-based modeling, ensure the code follows `guidelines/GTS.md` for identifier structure, traits usage, well-known instances, and extensibility patterns
+- [ ] Confirm registry/autodetect/ignore, secrets, FIPS (see `{fips_requirements}`), privilege-boundary, and security-boundary changes have a review record naming the guardrail or deviation, rationale, owner, and validation performed
+- [ ] If the design relies on GTS-based modeling, ensure the code follows `{guidelines_gts}` for identifier structure, traits usage, well-known instances, and extensibility patterns
 - [ ] Verify interactions and sequences are implemented as described
 - [ ] Ensure database schemas, constraints, and access patterns align with design
 - [ ] Confirm topology and tech stack choices are not contradicted

@@ -29,6 +29,8 @@
 - [ ] Use valid upstream requirement IDs and priority markers from the template
 
 ### Semantic
+- [ ] Follow `{iso_29148}` for requirements-standard conventions
+- [ ] Before capturing requirements for a new or evolving gear, check `{gears_md}`'s gear catalog, `{repo_playbook}`'s broader standards/tooling map, and candidate existing gears' `PRD.md`/`DESIGN.md` for functionality that already covers, or is already planned for, the same need
 - [ ] Capture source module needs as WHAT and WHY, not implementation HOW
 - [ ] Name the requesting module, the future module boundary, and the reason for every requirement
 - [ ] State an observable acceptance signal for each upstream requirement
