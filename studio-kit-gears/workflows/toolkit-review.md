@@ -72,17 +72,24 @@ owns PR/branch resolution, diff fetching, the seven subject sub-agent dispatch
 formatting or posting — this workflow does not re-implement any of that.
 
 ### Fallback — skill not installed
-If the `toolkit-pr-review` skill isn't live-invocable in this session (for example a
-standalone kit install without `.claude/skills/toolkit-pr-review` registered as a usable
-skill), the kit still bundles the real skill directory at `{skill_toolkit_pr_review}`
-(its `SKILL.md`) — read it
-first for the intended process (it's the actual skill content, not a paraphrase). Its
-process assumes seven dispatchable sub-agents that a standalone install likely doesn't have
-configured, so when those aren't available, read `{toolkit_pr_review_docs}/RULES.md` and
-`{toolkit_pr_review_docs}/rules/*.md` directly instead and apply them manually against the
-diff — one pass per rule module, covering the same
-architecture/async/design/errors/security/tests/toolkit areas — since those bundled rule
-modules are the actual criteria this review is based on, skill or no skill.
+`cfs generate-agents` only turns this kit's own `workflow_*` resources (this wrapper
+included) into invocable skills — it does not generate a bare `toolkit-pr-review` skill
+from `{skill_toolkit_pr_review}`. So in a standalone kit install, the live skill is never
+available here, not just rarely: go straight to this fallback rather than attempting
+`/toolkit-pr-review` first and only falling back on failure.
+
+Read `{skill_toolkit_pr_review}` (its `SKILL.md`) first for the intended process — it's the
+actual skill content, not a paraphrase. That process dispatches seven sub-agents named
+`toolkit-pr-review-architecture`, `-async`, `-design`, `-errors`, `-security`, `-tests`,
+`-toolkit` — but `cfs generate-agents` installs this kit's bundled copies of them
+(`{agent_toolkit_pr_review_architecture}` / `-async` / `-design` / `-errors` / `-security` /
+`-tests` / `-toolkit`) under the renamed identity `cf-gears-toolkit-pr-review-<area>`, not
+the bare name. **Dispatch them by that renamed identity, not the bare one.** If they aren't
+present under either name, read `{toolkit_pr_review_docs}/RULES.md` and
+`{toolkit_pr_review_docs}/rules/*.md` directly and apply them manually, one pass per module,
+covering the same architecture/async/design/errors/security/tests/toolkit areas — since
+those bundled files
+are the actual real definitions this review is based on, dispatchable or not.
 
 ## Step 3: Present results
 Summarize the findings to the user: severity, file:line, rule ID, and suggested fix. In PR
