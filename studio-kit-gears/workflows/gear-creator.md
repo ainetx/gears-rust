@@ -37,21 +37,12 @@ still gain `@cpt-*` traceability later through `cf-gears-doc-feature` + `cf-gear
 
 ## Overview
 
-Delegates entirely to the `gear-creator` skill, which owns:
-- **Create a new gear**: requirements gathering → design (document routing table, checklist
-  from `{toolkit_unified_system}/10_checklists_and_templates.md`) → scaffold (SDK crate,
-  gear crate, contract/domain/infra/API layers in dependency order) → wire and register
-  (workspace `Cargo.toml`, `apps/cf-gears-example-server`, ClientHub, feature flags) →
-  verify.
-- **Edit an existing gear**: understand scope → load only the relevant
-  `{toolkit_unified_system}` chapter(s) → study the existing code against
-  `examples/toolkit/users-info/` → implement under the DDD-light layer rules → verify.
-- The key invariants it enforces either way (SDK-first public API, `SecureConn`+
-  `AccessScope` for DB access, `OperationBuilder` with `.authenticated()`/
-  `.standard_errors()`, `#[domain_model]` on domain types, no `unwrap()`/`expect()`,
-  `PolicyEnforcer` PEP for AuthZ) are the same ones `{codebase_rules}` now names
-  explicitly — this workflow and `cf-gears-coding`/`cf-gears-implement` agree on them
-  rather than each inventing its own list.
+Delegates entirely to the `gear-creator` skill: it owns requirements/design/scaffold/wire/
+verify for a new gear, and understand-scope/load-docs/study/implement/verify for an edit —
+this workflow does not re-implement or re-describe either sequence. The invariants it
+enforces are the same ones `{codebase_rules}` names (not restated here, so there is one
+list, not two that can drift) — this workflow and `cf-gears-coding`/`cf-gears-implement`
+agree on them rather than each inventing its own.
 
 ## Steps
 
@@ -91,9 +82,8 @@ came from a design/decomposition rather than ad hoc).
 - [ ] Intent resolved (new gear vs. edit) before any file was written
 - [ ] The underlying skill was invoked, or the `{toolkit_unified_system}` fallback was
   applied when it wasn't available
-- [ ] Key invariants held (SDK-first API, `SecureConn`+`AccessScope`, `OperationBuilder`
-  `.authenticated()`/`.standard_errors()`, `#[domain_model]`, no `unwrap()`/`expect()`,
-  `PolicyEnforcer` PEP) or an approved deviation is documented
+- [ ] `{codebase_rules}`'s invariants held (see that file — not restated here) or an
+  approved deviation is documented
 - [ ] `cargo build`/`cargo clippy`/`make dylint`/`cargo test` pass for the touched crate(s)
 - [ ] A new gear is registered in the workspace and the example server
 - [ ] Results presented to the user, including whether FEATURE traceability is a sensible
