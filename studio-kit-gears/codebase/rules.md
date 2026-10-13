@@ -23,7 +23,8 @@
 ## Requirements
 
 ### Structural
-- [ ] Follow the gear layout in `{toolkit_unified_system}/02_gear_layout_and_sdk_pattern.md`: SDK crate for public contracts, gear crate for domain, API, and infrastructure
+- [ ] Follow the gear layout in `{toolkit_unified_system}/02_gear_layout_and_sdk_pattern.md`: SDK crate for public contracts, gear crate for domain, API, and infrastructure. Study `examples/toolkit/users-info/` for the layer being touched (SDK crate: `examples/toolkit/users-info/users-info-sdk/src/`; gear crate: `examples/toolkit/users-info/users-info/src/`) as the canonical reference implementation
+- [ ] Route to the matching `{toolkit_unified_system}` chapter for the surface being touched: `03_clienthub_and_plugins.md` for ClientHub/inter-gear clients/plugins, `04_rest_operation_builder.md` for REST endpoints/OperationBuilder/SSE, `05_errors_rfc9457.md` for error types/Problem/`From` impls, `06_authn_authz_secure_orm.md` for DB entities/SecureORM/AuthZ, `07_odata_pagination_select_filter.md` for OData/pagination, `08_lifecycle_stateful_tasks.md` for lifecycle/background tasks, `09_oop_grpc_sdk_pattern.md` for out-of-process gears/gRPC, `12_unit_testing.md`/`13_e2e_testing.md` for test layout
 - [ ] Follow cross-gear dependency rules, `SecurityContext` propagation, and middleware boundaries from `{gears_md}`
 - [ ] Follow `{guidelines_security}`, `{gears_security}`, and `{guidelines_dependencies}`
 - [ ] Follow repo Rust conventions from `{dna_rust}`
@@ -36,7 +37,8 @@
 ### Semantic
 - [ ] Implement every in-scope flow step, algorithm requirement, state transition, and definition-of-done item
 - [ ] Preserve PRD coverage outcomes and DESIGN principles, constraints, components, sequences, data contracts, and security requirements in code behavior
-- [ ] Preserve SDK-first public contracts, domain/API/infrastructure separation, runtime-owned privileged access, canonical OperationBuilder and operation-registration behavior, canonical API and error behavior, and safe wire errors unless the source FEATURE or DESIGN documents an approved deviation
+- [ ] Preserve SDK-first public contracts (the `<gear>-sdk` crate is the public API), domain/API/infrastructure separation, `SecureConn`+`AccessScope` for all DB access (no raw connections), AuthZ via the `PolicyEnforcer` PEP pattern (never construct `AccessScope` manually), `OperationBuilder` for all REST routes with `.authenticated()` and `.standard_errors()`, `#[domain_model]` on every non-module-private domain struct/enum (DE0309 lint; strictly module-private helpers are exempt), and safe wire errors unless the source FEATURE or DESIGN documents an approved deviation
+- [ ] Never use `unwrap()`/`expect()` in gear code outside tests; use proper `Result` types
 - [ ] Record review evidence for work touching registry, autodetect, or ignore matching, privilege boundaries, Secure ORM, SecurityContext, secrets, FIPS behavior (see `{fips_requirements}`), or other security-boundary logic: the touched guardrail or deviation, rationale, owner, and validation performed
 - [ ] Add compile-fail tests when the code exposes compile-time guarantees (macro diagnostics, generated code contracts, type-state APIs, security or type-system invariants) and a compile-fail harness exists; otherwise state why the gate does not apply
 - [ ] Never broaden scope beyond the source FEATURE without an explicit upstream artifact change

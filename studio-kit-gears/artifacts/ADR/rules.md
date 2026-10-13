@@ -36,6 +36,7 @@
 - [ ] Document performance, security, reliability, data, integration, operations, testing, compliance, UX, and business impact when applicable; otherwise state why not applicable
 - [ ] Never hide tradeoffs, consequences, migration obligations, or reversibility notes
 - [ ] Exclude complete architecture descriptions, product requirements, implementation tasks, schema definitions, code, secrets, test implementation, and operational runbooks
+- [ ] When the gear's `DESIGN.md` (or a downstream `DECOMPOSITION.md`/`FEATURE*.md`) already exists, check it for content this decision contradicts — a principle, constraint, component, or sequence the new decision supersedes rather than merely extends; this ADR is commonly authored *after* those documents, and linking to them (Tasks, below) is not the same check as verifying they still hold
 
 ---
 
@@ -70,10 +71,11 @@
 ### Recovery Options
 - [ ] If structural validation fails, fix heading structure and the Table of Contents first
 - [ ] If the decision revises an accepted ADR, author a superseding ADR instead of editing the accepted one
+- [ ] If this ADR contradicts existing DESIGN/DECOMPOSITION/FEATURE content, never edit that upstream document from here — name the exact contradiction in this ADR's Consequences section instead, so it's visible to whoever picks up the required follow-up
 
 ---
 
 ## Next Steps
 
 ### Options
-- [ ] Reflect the decision in the gear DESIGN through `cf-gears-doc-design`
+- [ ] Reflect the decision in the gear DESIGN through `cf-gears-doc-design` — **required**, not optional, when this ADR flagged a contradiction with existing DESIGN/DECOMPOSITION/FEATURE content; state that requirement explicitly when presenting this ADR as done

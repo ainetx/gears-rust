@@ -452,36 +452,83 @@ Gear runtime settings are YAML-driven under `gears:<gear_name>:` with a `config`
 
 ## 7.3 CI Pipeline Summary
 
+`ci.yml` itself path-filters which of its jobs run (job `changes`, via
+`dorny/paths-filter`) — this is the authoritative source for what triggers what; the
+table below mirrors it, don't let this doc drift from `.github/workflows/*.yml` again.
+
 ```
 PR opened / updated
   ├── ci.yml
-  │     ├── test          — fmt + clippy + unit tests (Ubuntu, macOS, Windows)
-  │     ├── integration   — DB integration tests (Ubuntu)
-  │     ├── test-fips     — FIPS verification / platform-specific FIPS test lanes
-  │     ├── security      — cargo-deny
-  │     ├── coverage      — cargo-llvm-cov → Codecov upload
-  │     ├── lint          — custom architectural lints (cargo gears lint)
-  │     └── cypilot       — artifact / specification validation
+  │     ├── clippy             — workspace clippy, 2-pass (always)
+  │     ├── test                — fmt + clippy + unit tests (Ubuntu, macOS, Windows; always)
+  │     ├── integration         — DB/Docker integration tests (Ubuntu; always)
+  │     ├── test-fips           — FIPS build/test, 3 OSes (only when `libs/toolkit/**`,
+  │     │                         `libs/toolkit-http/**`, or `libs/rustls-*/**` changed)
+  │     ├── test-graph-storage  — graph-storage gear's own suite (only when
+  │     │                         `gears/graph-storage/**` changed)
+  │     ├── test-onnx-embedding — ONNX plugin + `--features onnx` check (only when
+  │     │                         `gears/graph-storage/{onnx-embedding-plugin,graph-storage-sdk,graph-storage}/**` changed)
+  │     ├── test-magika         — magika feature lane (only when `gears/file-parser/**` changed)
+  │     ├── security            — `make deny` (only when `**/Cargo.toml`, `Cargo.lock`,
+  │     │                         or `deny.toml` changed)
+  │     ├── coverage            — cargo-llvm-cov → Codecov upload (always; advisory)
+  │     ├── lint                — custom architectural lints (`cargo gears lint`; always)
+  │     └── cfs                 — `make cfs-validate` + `cfs-validate-kits` (always)
   │
-  ├── fmt.yml             — dedicated cargo fmt validation for Rust changes
-  ├── docs.yml            — Markdown link checking for docs changes
-  ├── gts-validation.yml  — GTS identifier validation for docs / schema changes
+  ├── fmt.yml              — dedicated cargo fmt validation for Rust changes
+  ├── api_contracts.yml    — OpenAPI spec freshness (`make openapi`) + oasdiff breaking-change
+  │                          gate, on any `**/*.rs`, `**/Cargo.toml`, `Cargo.lock`, `Makefile`,
+  │                          or `config/quickstart.yaml` change (broader trigger than it sounds —
+  │                          not just REST-touching files)
+  ├── gts-validation.yml   — GTS identifier validation, on `**/*.md`/`*.json`/`*.yaml`/`*.yml`,
+  │                          `docs/**`, or `guidelines/**` changes (doc/schema paths — a
+  │                          GTS identifier touched only in `.rs` code does not trigger this)
+  ├── clusterfuzzlite.yml  — PR-triggered libFuzzer/ASan run, on `**/*.rs`, `**/Cargo.toml`,
+  │                          `Cargo.lock`, or `rust-toolchain.toml` changes (NOT nightly-only)
+  ├── docs.yml, web-docs-check.yml — Markdown/web-docs link checking, doc-path changes only
+  ├── crlf-check.yml       — repo-wide CRLF line-ending check
+  ├── forbidden-words.yml  — disallowed-term scan
+  ├── dco-signoff.yml      — DCO sign-off presence check
+  ├── helm.yml             — Helm chart lint/template, Helm-path changes only
   └── e2e.yml (PRs to main only)
         └── e2e           — full E2E suite (local mode), plus mini-chat, TR/AuthZ
-                            and usage-collector E2E lanes
+                            and usage-collector E2E lanes — runs on every PR to main
+                            regardless of what the diff touches
 
-Additional quality workflows
-  ├── codeql.yml          — security and quality code scanning
-  ├── pr-governance.yml   — review-governance automation
-  └── pr-reviewer-check.yml — reviewer assignment hygiene
+Additional quality / automation workflows (not per-PR correctness gates for ordinary
+CODE changes): codeql.yml (security/quality scanning), pr-governance.yml and
+pr-reviewer-check.yml (both currently disabled), test-report.yml, code-ranker.yml,
+release-plz.yml, scorecard.yml, cache_cleanup.yml, notify-docs.yml, pr-dashboard.yml.
 
-Nightly (schedule)
+Nightly / scheduled only
+  ├── shear-nightly.yml    — workspace unused-dependency scan (`make shear`); advisory,
+  │                          opens/closes a tracking issue on failure/recovery
   ├── e2e.yml              — full E2E + specialized E2E lanes (auto-creates issue on failure)
-  ├── clusterfuzzlite      — fuzz testing
-  ├── codeql.yml           — scheduled code scanning
-  ├── pr-governance.yml    — governance / follow-up automation
-  └── pr-reviewer-check.yml — reviewer assignment checks
+  ├── clippy-nightly.yml   — full feature-matrix clippy (`clippy-deep`)
+  └── codeql.yml           — scheduled code scanning
 ```
+
+---
+
+## 7.4 Local CI Routing — what to run for what you changed
+
+Don't run the whole pipeline locally for every change. Route by what the diff actually
+touches, mirroring `ci.yml`'s own `changes` job (the one source of truth for these
+conditions — if it drifts from this table, trust the workflow file):
+
+| Changed | Run locally | Matches CI job |
+|---|---|---|
+| `**/Cargo.toml`, `Cargo.lock`, or `deny.toml` | `make deny` | `ci.yml` / `security` |
+| `**/Cargo.toml` or `Cargo.lock` changed | `make shear` | `shear-nightly.yml` (advisory, nightly-only in CI — catching it locally is stricter, not redundant). A version bump can also surface this if it drops the last caller of a transitive dep; a plain `git status` can't tell "added/removed" from "bumped" apart, so this routes off the same dependency-changed signal as `make deny` rather than trying to distinguish them |
+| Any `.rs` file, when the gear exposes REST endpoints via the example server | `make openapi GEAR=<gear>` | `api_contracts.yml` (CI's own trigger is broader — any `.rs`/Cargo/Makefile change — so this local heuristic is narrower than CI; a change outside REST-facing files can still occasionally need it) |
+| GTS identifiers, type schemas, well-known instances, or `x-gts-traits` touched in code (even without touching a `.md`/`.json`/`.yaml`/`.yml` file) | `make gts-docs` | `gts-validation.yml` only triggers on doc/schema file paths, not on `.rs` changes alone — running this locally for GTS-touching code changes is **stricter** than what CI gates on today |
+| `libs/toolkit/**`, `libs/toolkit-http/**`, or `libs/rustls-*/**` | `make test-fips` | `ci.yml` / `test-fips` |
+| `gears/graph-storage/**` (excluding the onnx/sdk-only lane below) | `make test-graph-storage` | `ci.yml` / `test-graph-storage` (the PostgreSQL lane, `test-graph-storage-pg`, needs a pinned Postgres+pgvector image and isn't part of this quick local check) |
+| `gears/graph-storage/{onnx-embedding-plugin,graph-storage-sdk}/**` | `cargo test -p cf-gears-graph-storage-onnx-embedding-plugin` (no Makefile wrapper yet) | `ci.yml` / `test-onnx-embedding` |
+| `gears/file-parser/**` | `cargo test -p cf-gears-file-parser --features magika` (no Makefile wrapper yet) | `ci.yml` / `test-magika` |
+
+None of these replace `make gear-ci GEAR=<gear>` + `make dylint` (always required) — they're
+additive, triggered only when their own condition is true.
 
 ---
 
@@ -515,7 +562,7 @@ The CI `lint` job applies the architecture lints to the workspace on every PR.
 | **rustfmt** | Formatting enforcement | `make fmt` | `test` |
 | **cargo gears lint** | Project-specific architectural lints (layer separation, DTO placement) | `cargo gears lint` | `lint` |
 | **cargo-deny** | License compliance, advisories, banned crates | `make deny` | `security` |
-| **cargo-kani** | Formal verification of unsafe code and invariants | `make kani` | `test` (via `safety`) |
+| **cargo-kani** | Formal verification of unsafe code and invariants | `make kani` | none — not invoked by any workflow today; local/manual only despite `make safety` bundling it |
 | **cargo-geiger** | Audit of `unsafe` usage in dependencies | `make geiger` | manual |
 
 ---

@@ -266,6 +266,15 @@ user_modifiable = true
 public = true
 
 [[kits.resources]]
+id = "workflow_gear_creator"
+kind = "skill"
+source = "studio-kit-gears/workflows/gear-creator.md"
+install_path = "workflows/gear-creator.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
 id = "workflow_coding"
 kind = "skill"
 source = "studio-kit-gears/workflows/coding.md"
