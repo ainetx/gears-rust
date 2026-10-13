@@ -13,3 +13,9 @@ ALWAYS open and follow `{cf-studio-path}/.core/skills/studio/SKILL.md` FIRST.
 
 LOAD `{skill_toolkit_pr_review}` and FOLLOW all of its instructions, passing through
 whatever parameters were given to this workflow.
+
+This kit's `generate-agents` renames the skill's 7 sub-agents with a `cf-gears-` prefix
+(`cf-gears-toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}`),
+not the bare names the skill's own text uses to dispatch them
+(`toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}`). Dispatch by
+whichever identity actually exists in this session, preferring the renamed one.
