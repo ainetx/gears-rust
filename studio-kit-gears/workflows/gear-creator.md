@@ -52,17 +52,25 @@ capabilities needed — `db`/`rest`/`stateful` — dependencies on other gears, 
 is needed for a new gear; or what's changing for an edit).
 
 ## Step 2: Run the gear-creator skill
-Invoke the `gear-creator` skill with the resolved intent. It drives its own
+LOAD `.claude/skills/gear-creator/SKILL.md` (the real skill, by its own canonical name —
+not this wrapper's paraphrase of it) and follow it with the Step 1 intent (new-gear
+requirements, or the edit's scope) as its triggering context. Unlike `toolkit-pr-review`,
+`gear-creator` has no positional-argument syntax — it is description-triggered, matched on
+intent, not invoked with a `/gear-creator <args>` form. It drives its own
 requirements/design/scaffold/wire/verify (new gear) or
 understand-scope/load-docs/study/implement/verify (edit) sequence — this workflow does not
 re-implement any of it.
 
 ### Fallback — skill not installed
-If `gear-creator` isn't live-invocable in this session (e.g. a standalone kit install
-without `.claude/skills/gear-creator` registered as a usable skill), the kit still bundles
-the real skill directory at `{skill_gear_creator}` (its `SKILL.md`) — read it first; it's
-the actual skill content, not a paraphrase, and covers both the new-gear and
-edit-existing-gear sequences in full. If that's somehow still not enough context, fall back further to
+`cfs generate-agents` only turns this kit's own `workflow_*` resources (this wrapper
+included) into invocable skills — it does not generate a bare `gear-creator` skill from
+`{skill_gear_creator}`. So in a standalone kit install, the live skill is never available
+here, not just rarely: go straight to this fallback rather than attempting to load the live
+skill first and only falling back on failure.
+
+LOAD `{skill_gear_creator}` (its `SKILL.md`) and follow it directly — it's the actual skill
+content, not a paraphrase, and covers both the new-gear and edit-existing-gear sequences in
+full. If that file itself is somehow also unavailable, fall back further to
 `{toolkit_unified_system}`'s own document-routing guidance directly: `01_overview.md` for
 the golden path, `02_gear_layout_and_sdk_pattern.md` for structure, then the chapter
 matching the capability being added (see `{codebase_rules}`'s routing list), and
