@@ -58,12 +58,15 @@ understand-scope/load-docs/study/implement/verify (edit) sequence — this workf
 re-implement any of it.
 
 ### Fallback — skill not installed
-If `gear-creator` isn't available in this session (e.g. a standalone kit install without
-`.claude/skills/gear-creator`), follow `{toolkit_unified_system}`'s own document-routing
-guidance directly: `01_overview.md` for the golden path, `02_gear_layout_and_sdk_pattern.md`
-for structure, then the chapter matching the capability being added (see
-`{codebase_rules}`'s routing list), and `examples/toolkit/users-info/` as the reference
-implementation.
+If `gear-creator` isn't live-invocable in this session (e.g. a standalone kit install
+without `.claude/skills/gear-creator` registered as a usable skill), the kit still bundles
+the real skill directory at `{skill_gear_creator}` (its `SKILL.md`) — read it first; it's
+the actual skill content, not a paraphrase, and covers both the new-gear and
+edit-existing-gear sequences in full. If that's somehow still not enough context, fall back further to
+`{toolkit_unified_system}`'s own document-routing guidance directly: `01_overview.md` for
+the golden path, `02_gear_layout_and_sdk_pattern.md` for structure, then the chapter
+matching the capability being added (see `{codebase_rules}`'s routing list), and
+`examples/toolkit/users-info/` as the reference implementation.
 
 ## Step 3: Verify
 `cargo build -p <gear-crate>`, `cargo clippy -p <gear-crate>`, `make dylint`, `cargo test -p

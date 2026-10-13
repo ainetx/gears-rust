@@ -72,10 +72,15 @@ owns PR/branch resolution, diff fetching, the seven subject sub-agent dispatch
 formatting or posting — this workflow does not re-implement any of that.
 
 ### Fallback — skill not installed
-If the `toolkit-pr-review` skill isn't available in this session (for example a
-standalone kit install without `.claude/skills/toolkit-pr-review`), read
-`{toolkit_pr_review_docs}/RULES.md` and `{toolkit_pr_review_docs}/rules/*.md` directly and
-apply them manually against the diff — one pass per rule module, covering the same
+If the `toolkit-pr-review` skill isn't live-invocable in this session (for example a
+standalone kit install without `.claude/skills/toolkit-pr-review` registered as a usable
+skill), the kit still bundles the real skill directory at `{skill_toolkit_pr_review}`
+(its `SKILL.md`) — read it
+first for the intended process (it's the actual skill content, not a paraphrase). Its
+process assumes seven dispatchable sub-agents that a standalone install likely doesn't have
+configured, so when those aren't available, read `{toolkit_pr_review_docs}/RULES.md` and
+`{toolkit_pr_review_docs}/rules/*.md` directly instead and apply them manually against the
+diff — one pass per rule module, covering the same
 architecture/async/design/errors/security/tests/toolkit areas — since those bundled rule
 modules are the actual criteria this review is based on, skill or no skill.
 

@@ -257,6 +257,24 @@ user_modifiable = true
 public = true
 
 [[kits.resources]]
+id = "skill_toolkit_pr_review"
+kind = "skill"
+source = ".claude/skills/toolkit-pr-review"
+install_path = ".claude/skills/toolkit-pr-review"
+type = "directory"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
+id = "skill_gear_creator"
+kind = "skill"
+source = ".claude/skills/gear-creator"
+install_path = ".claude/skills/gear-creator"
+type = "directory"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
 id = "workflow_toolkit_review"
 kind = "skill"
 source = "studio-kit-gears/workflows/toolkit-review.md"

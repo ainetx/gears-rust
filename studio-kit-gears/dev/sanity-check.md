@@ -160,48 +160,68 @@ and never calls `toolkit-pr-review` directly. Note: `{cf-studio-path}/.core/` is
 untracked runtime cache, absent by default in a fresh isolated worktree — not a kit bug,
 proceed from the repo's own files when it's missing rather than treating it as a blocker.)
 
-## Scenario 6 — `cf-gears-toolkit-review` workflow, live, pinned PR
+## Scenario 6 — `cf-gears-toolkit-review` workflow + `{skill_toolkit_pr_review}` bundling, live, pinned PR
+
+**Design note (two false starts corrected here)**: first pass bundled only
+`docs/toolkit-pr-review` (the rule docs) and wrote a wrapper workflow that restated the
+skill's routing/invariants inline — too fat, not actually delegating. Second pass swung too
+far the other way: deleted the wrapper entirely and had every caller invoke the
+`toolkit-pr-review`/`gear-creator` skills directly, reasoning that since the skills are
+already `user-invocable: true`, no kit-level wrapper was needed at all. Final, correct
+shape: **both** layers exist — `{skill_toolkit_pr_review}`/`{skill_gear_creator}` bundle the
+real `SKILL.md` files as manifest resources (so a standalone install actually has them, not
+just their rule docs), and `cf-gears-toolkit-review`/`cf-gears-gear-creator` remain thin
+wrapper workflows that invoke those skills and carry only what genuinely doesn't belong in a
+repo-wide, kit-independent skill: Studio routing (vs. `cf-gears-pr-review`/`cf-gears-implement`),
+and the standalone-fallback instruction to read the now-bundled real skill file directly
+when the skill isn't live-invocable.
 
 > In `<WORKTREE_PATH>`, read `studio-kit-gears/workflows/toolkit-review.md` in full, then
-> execute it in local mode against the same reconstructed-local-branch for PR **#5213**
-> as Scenario 4 (reuse that reconstruction). Confirm the workflow's own prose reads
-> clearly enough to execute without guessing, and that invoking the underlying skill
-> through this wrapper produces the same quality of grounded findings as Scenario 4's
-> direct call (don't just trust it — compare the findings). Also confirm the `--base
-> <REF>` passthrough this workflow documents is actually honored. Report pass/fail. Under
-> 200 words.
+> execute it in local mode against the same reconstructed-local-branch for PR **#5213** as
+> Scenario 4 (reuse that reconstruction). Confirm the workflow's own prose reads clearly
+> enough to execute without guessing, and that invoking the underlying skill through this
+> wrapper produces the same quality of grounded findings as Scenario 4's direct call (don't
+> just trust it — compare the findings). Confirm the `--base <REF>` passthrough is actually
+> honored. Separately, run `cfs resolve-vars --kit gears --flat` and confirm
+> `{skill_toolkit_pr_review}`/`{skill_gear_creator}` resolve to the real
+> `.claude/skills/{toolkit-pr-review,gear-creator}/` directories (directory resources, not
+> single-file, specifically so a future sibling file added to either skill folder is
+> bundled automatically rather than silently missed) — confirm each contains a `SKILL.md`
+> matching the live file byte-for-byte, and list any other files present (none expected
+> today; flag if that's changed and the manifest wasn't updated to match). Confirm both
+> wrapper files' Fallback sections actually cite those variables (not just the
+> rule-docs/chapter fallback). Report pass/fail. Under 250 words.
 
 **Expected**: PASS, output indistinguishable from Scenario 4's direct skill call, `--base`
-passthrough actually changes behavior (not silently ignored). (Last confirmed: PASS —
-empirically verified `--base` matters by running both with and without it: without,
-`review.py prepare --local` resolved base to the branch's own tip since the reconstructed
-branch is already an ancestor of `main`, yielding 0 files/0 agents — exactly the failure
-mode the workflow's own docs warn about; with `--base` pointed at the PR's merge-parent
-commit, 5 files + 7 agents ran correctly. 3 grounded findings, including a CRITICAL
-`RUST-SEC-001` not caught by Scenario 4's run.)
+passthrough actually changes behavior, both bundled skill variables resolve to real matching
+content, both wrappers' Fallback sections cite them. (Last confirmed, before this redesign's
+final pass: PASS on the workflow/`--base` half — empirically verified `--base` matters by
+running both with and without it: without, `review.py prepare --local` resolved base to the
+branch's own tip since the reconstructed branch is already an ancestor of `main`, yielding 0
+files/0 agents — exactly the failure mode the workflow's own docs warn about; with `--base`
+pointed at the PR's merge-parent commit, 5 files + 7 agents ran correctly, 3 grounded
+findings including a CRITICAL `RUST-SEC-001`. Re-confirm the bundling half specifically,
+since the Fallback sections were rewritten after that run to cite the new variables.)
 
-## Scenario 7 — `cf-gears-gear-creator` workflow, live
+## Scenario 7 — `cf-gears-gear-creator` workflow, live, pinned edit
 
-> Exercise Step 2 (invoke the `gear-creator` skill per `studio-kit-gears/workflows/gear-creator.md`'s
-> instructions, read in full first) against this exact pinned edit: add field
-> `min_display_name_length: usize` (default `1`) to `pub struct ServiceConfig` in
-> `examples/toolkit/users-info/users-info/src/domain/service/mod.rs`, plus the required
-> call-site update in `examples/toolkit/users-info/users-info/src/gear.rs`'s `ServiceConfig`
-> struct literal (no `..Default::default()` there, so the new field must be added
-> explicitly). Confirm `git status --porcelain` is clean before starting. Confirm the
-> wrapper's routing/overview/steps are followed as written, that Step 3's verify commands
-> match what the wrapper actually names, and run them scoped to `users-info` (`cargo
-> build`, `cargo clippy`, `cargo gears lint --dylint` i.e. `make dylint`, `cargo test`).
-> Discard via `git checkout -- .` when done; confirm `git status --porcelain` is clean
-> afterward. Report pass/fail. Under 250 words.
+> In `<WORKTREE_PATH>`, read `studio-kit-gears/workflows/gear-creator.md` in full, then
+> exercise Step 2 (invoke the `gear-creator` skill per the wrapper's instructions) against
+> this exact pinned edit: add field `min_display_name_length: usize` (default `1`) to `pub
+> struct ServiceConfig` in `examples/toolkit/users-info/users-info/src/domain/service/mod.rs`,
+> plus the required call-site update in
+> `examples/toolkit/users-info/users-info/src/gear.rs`'s `ServiceConfig` struct literal (no
+> `..Default::default()` there, so the new field must be added explicitly). Confirm `git
+> status --porcelain` is clean before starting. Confirm the wrapper's routing/overview/steps
+> are followed as written, that Step 3's verify commands match what the wrapper actually
+> names, and run them scoped to `users-info` (`cargo build`, `cargo clippy`, `cargo gears
+> lint --dylint` i.e. `make dylint`, `cargo test`). Discard via `git checkout -- .` when
+> done; confirm `git status --porcelain` is clean afterward. Report pass/fail. Under 250
+> words.
 
-**Expected**: PASS. All 4 verify commands green (`cargo build`/`clippy`/`dylint`/`test`,
-scoped to `users-info`); edit applied then cleanly discarded. (Last confirmed: PASS — this
-exact edit, first baseline established. A prior run of just the underlying `gear-creator`
-skill, without this wrapper file present at all, already separately confirmed the skill
-and verify commands work on this same pinned edit — see PR #5326's history — so this
-scenario's bar is specifically the wrapper's own prose/routing, not the skill's raw
-behavior.)
+**Expected**: PASS. All 4 verify commands green, scoped to `users-info`; edit applied then
+cleanly discarded; wrapper's prose followed without guessing. (Last confirmed: PASS, on this
+exact pinned edit, with the wrapper present and correctly routed to.)
 
 ## Scenario 8 — Smart CI routing: fact-detection and `{testing_policy}` routing
 
