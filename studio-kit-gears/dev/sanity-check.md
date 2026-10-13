@@ -330,6 +330,53 @@ named paths exist, both scenarios still PASS, chapter `09` still has 0 internal
 removed). (Last confirmed: this session, pre-commit for PR #5326's third commit — see that
 PR's "Tested" section for the two cold-read sub-agent reports this scenario condenses.)
 
+## Scenario 12 — Standalone install actually generates real, dispatchable agents
+
+**Why this exists**: bundling a resource via the manifest (confirmed correct by Scenario 3)
+is not the same question as whether `cfs generate-agents` turns it into something a live
+Claude Code session can actually invoke. This scenario exists because checking that
+distinction once already found a real, non-obvious gap: the kit's own `workflow_*`
+resources DO become invocable skills (`cf-gears-toolkit-review`, `cf-gears-gear-creator`,
+etc.) via `generate-agents`, but the bundled `{skill_toolkit_pr_review}`/`{skill_gear_creator}`
+directories do NOT — `generate-agents` only processes the kit's own workflow-shaped
+resources, never the arbitrary skill directories bundled alongside them. The 7 bundled
+`{agent_toolkit_pr_review_*}` resources DO generate real agent files, but renamed with a
+`cf-gears-` prefix and broader default tools than the originals.
+
+> In a FRESH scratch directory (create one under your own scratchpad, NOT inside
+> `<WORKTREE_PATH>`), run: `git init -q`, `cfs init --yes`, then `cfs kit install --path
+> <WORKTREE_PATH> --install-mode copy --kit gears` (add `--force --approve-overwrite
+> workflow_toolkit_review --approve-overwrite workflow_gear_creator --approve-overwrite
+> scripts --approve-overwrite ensure_dna_script`, or whatever resource ids it names as
+> changed, if this isn't a first install there). Then run `cfs generate-agents --agent
+> claude -y` and confirm, by listing `.claude/agents/` and `.claude/skills/` in that scratch
+> directory:
+> (a) `cf-gears-toolkit-review` and `cf-gears-gear-creator` exist under `.claude/skills/`
+> and are real, non-trivial PDSL bootstrap files (not stubs) that load
+> `{cf-studio-path}/config/kits/gears/workflows/{toolkit-review,gear-creator}.md` as their
+> controlling protocol;
+> (b) no skill literally named `toolkit-pr-review` or `gear-creator` (bare, no `cf-gears-`
+> prefix) exists under `.claude/skills/` — confirming the wrapper's Fallback is right to say
+> "go straight to fallback, not rarely";
+> (c) all 7 of `cf-gears-toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}.md`
+> exist under `.claude/agents/`, and diff one of them (e.g. `architecture`) against the live
+> source at `<WORKTREE_PATH>/.claude/agents/toolkit-pr-review-architecture.md` — confirm the
+> renamed one keeps the original's **body** (the `Read docs/toolkit-pr-review/agents/....md
+> and follow its instructions` instruction) but note the frontmatter differences (`name`
+> prefixed, `description` replaced with a generic auto-generated one, `tools` broadened from
+> `Read, Bash` to `Bash, Read, Write, Edit, Glob, Grep`) — this is expected Studio-wide
+> `generate-agents` behavior, not a kit bug to fix, but must stay accurate in the wrapper's
+> own Fallback wording if it ever changes.
+> Report pass/fail for (a)/(b)/(c), under 300 words.
+
+**Expected**: (a) PASS — both kit skills generated and load the right controlling protocol.
+(b) PASS — no bare-named skill generated. (c) PASS — all 7 agents generated under the
+`cf-gears-` prefix, body preserved, frontmatter broadened as described. (Last confirmed:
+PASS on all three, in this session — `cf-gears-gear-creator` and
+`cf-gears-toolkit-pr-review-architecture` spot-checked directly; the other 6 agent files
+and `cf-gears-toolkit-review` were not independently spot-checked this run, only listed —
+do a full spot-check on the next pass.)
+
 ---
 
 ## Reporting
@@ -349,6 +396,7 @@ Collect every scenario's agent result into one table:
 | 9 | GearsCodeChainSweep (4 traces + routing) | | |
 | 10 | Manifest structural integrity | | |
 | 11 | Full-chapter + `docs/arch` citation coverage | | |
+| 12 | Standalone install generates real, dispatchable agents | | |
 
 Any scenario that regresses from its "Expected" line is a real regression in the kit,
 not a test-flake — these scenarios are all deterministic by construction (pinned PRs,

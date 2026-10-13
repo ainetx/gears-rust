@@ -275,6 +275,69 @@ user_modifiable = true
 public = true
 
 [[kits.resources]]
+id = "agent_toolkit_pr_review_architecture"
+kind = "agent"
+source = ".claude/agents/toolkit-pr-review-architecture.md"
+install_path = ".claude/agents/toolkit-pr-review-architecture.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
+id = "agent_toolkit_pr_review_async"
+kind = "agent"
+source = ".claude/agents/toolkit-pr-review-async.md"
+install_path = ".claude/agents/toolkit-pr-review-async.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
+id = "agent_toolkit_pr_review_design"
+kind = "agent"
+source = ".claude/agents/toolkit-pr-review-design.md"
+install_path = ".claude/agents/toolkit-pr-review-design.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
+id = "agent_toolkit_pr_review_errors"
+kind = "agent"
+source = ".claude/agents/toolkit-pr-review-errors.md"
+install_path = ".claude/agents/toolkit-pr-review-errors.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
+id = "agent_toolkit_pr_review_security"
+kind = "agent"
+source = ".claude/agents/toolkit-pr-review-security.md"
+install_path = ".claude/agents/toolkit-pr-review-security.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
+id = "agent_toolkit_pr_review_tests"
+kind = "agent"
+source = ".claude/agents/toolkit-pr-review-tests.md"
+install_path = ".claude/agents/toolkit-pr-review-tests.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
+id = "agent_toolkit_pr_review_toolkit"
+kind = "agent"
+source = ".claude/agents/toolkit-pr-review-toolkit.md"
+install_path = ".claude/agents/toolkit-pr-review-toolkit.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
 id = "workflow_toolkit_review"
 kind = "skill"
 source = "studio-kit-gears/workflows/toolkit-review.md"
