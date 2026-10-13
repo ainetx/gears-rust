@@ -29,6 +29,7 @@
 - [ ] Use valid Gears ADR IDs and status values from the template
 
 ### Semantic
+- [ ] Follow this repo's real ADR style and depth of tradeoff analysis as precedent: `{repo_adrs}`, `{repo_arch}` (cross-cutting architecture ADRs, e.g. errors/authorization/toolkit-oop), and gear-local `docs/ADR/` directories when present
 - [ ] Compare at least two viable options unless the user explicitly records a constrained decision
 - [ ] Record why the chosen option wins and why rejected options lose
 - [ ] State decision drivers, decision scope, and review or supersession expectations

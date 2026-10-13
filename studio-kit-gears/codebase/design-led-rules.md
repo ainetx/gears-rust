@@ -14,20 +14,26 @@
 ### Load Dependencies
 - [ ] Load the source design context; stop and ask when it cannot be resolved from the request or the repository
 - [ ] Leave `{codebase_checklist}` to the review stage; authoring does not load it
+- [ ] Run `{ensure_dna_script}` before relying on `{dna_rust}`/`{dna_rest}` content
 
 ---
 
 ## Requirements
 
 ### Structural
-- [ ] Follow the gear layout in `docs/toolkit_unified_system/02_gear_layout_and_sdk_pattern.md`: SDK crate for public contracts, gear crate for domain, API, and infrastructure
+- [ ] Follow the gear layout in `{toolkit_unified_system}/02_gear_layout_and_sdk_pattern.md`: SDK crate for public contracts, gear crate for domain, API, and infrastructure
+- [ ] Follow cross-gear dependency rules, `SecurityContext` propagation, and middleware boundaries from `{gears_md}`
+- [ ] Follow `{guidelines_security}`, `{gears_security}`, and `{guidelines_dependencies}`
+- [ ] Follow repo Rust conventions from `{dna_rust}`
+- [ ] If the gear exposes HTTP/REST or SSE endpoints, follow `{dna_rest}` for status codes, versioning, batching, and querying conventions
+- [ ] Follow `{testing_policy}` for test strategy, coverage requirements, and which checks must be green locally before a PR
 - [ ] Never add, require, remove, or rewrite `@cpt-*` markers for DESIGN-led work
 - [ ] Never update FEATURE implementation checkboxes or statuses
 
 ### Semantic
 - [ ] Preserve PRD outcomes and DESIGN principles, constraints, components, sequences, data contracts, and security requirements in code behavior when those sources exist
 - [ ] Preserve SDK-first public contracts, domain/API/infrastructure separation, runtime-owned privileged access, canonical OperationBuilder and operation-registration behavior, canonical API and error behavior, and safe wire errors unless the design context documents an approved deviation
-- [ ] Record review evidence for work touching registry, autodetect, or ignore matching, privilege boundaries, Secure ORM, SecurityContext, secrets, FIPS behavior, or other security-boundary logic: the touched guardrail or deviation, rationale, owner, and validation performed
+- [ ] Record review evidence for work touching registry, autodetect, or ignore matching, privilege boundaries, Secure ORM, SecurityContext, secrets, FIPS behavior (see `{fips_requirements}`), or other security-boundary logic: the touched guardrail or deviation, rationale, owner, and validation performed
 - [ ] Add compile-fail tests when the code exposes compile-time guarantees and a compile-fail harness exists; otherwise state why the gate does not apply
 - [ ] Never broaden scope beyond the source design context without an upstream artifact change or a user-approved scope change
 
