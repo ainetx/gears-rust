@@ -282,6 +282,8 @@ install_path = ".claude/agents/toolkit-pr-review-architecture.md"
 type = "file"
 user_modifiable = true
 public = true
+mode = "readonly"
+tools = ["Read", "Bash"]
 
 [[kits.resources]]
 id = "agent_toolkit_pr_review_async"
@@ -291,6 +293,8 @@ install_path = ".claude/agents/toolkit-pr-review-async.md"
 type = "file"
 user_modifiable = true
 public = true
+mode = "readonly"
+tools = ["Read", "Bash"]
 
 [[kits.resources]]
 id = "agent_toolkit_pr_review_design"
@@ -300,6 +304,8 @@ install_path = ".claude/agents/toolkit-pr-review-design.md"
 type = "file"
 user_modifiable = true
 public = true
+mode = "readonly"
+tools = ["Read", "Bash"]
 
 [[kits.resources]]
 id = "agent_toolkit_pr_review_errors"
@@ -309,6 +315,8 @@ install_path = ".claude/agents/toolkit-pr-review-errors.md"
 type = "file"
 user_modifiable = true
 public = true
+mode = "readonly"
+tools = ["Read", "Bash"]
 
 [[kits.resources]]
 id = "agent_toolkit_pr_review_security"
@@ -318,6 +326,8 @@ install_path = ".claude/agents/toolkit-pr-review-security.md"
 type = "file"
 user_modifiable = true
 public = true
+mode = "readonly"
+tools = ["Read", "Bash"]
 
 [[kits.resources]]
 id = "agent_toolkit_pr_review_tests"
@@ -327,6 +337,8 @@ install_path = ".claude/agents/toolkit-pr-review-tests.md"
 type = "file"
 user_modifiable = true
 public = true
+mode = "readonly"
+tools = ["Read", "Bash"]
 
 [[kits.resources]]
 id = "agent_toolkit_pr_review_toolkit"
@@ -336,6 +348,8 @@ install_path = ".claude/agents/toolkit-pr-review-toolkit.md"
 type = "file"
 user_modifiable = true
 public = true
+mode = "readonly"
+tools = ["Read", "Bash"]
 
 [[kits.resources]]
 id = "workflow_toolkit_review"
