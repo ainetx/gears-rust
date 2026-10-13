@@ -522,6 +522,14 @@ type = "file"
 user_modifiable = true
 
 [[kits.resources]]
+id = "e2e_guide"
+kind = "other"
+source = "testing/e2e/README.md"
+install_path = "testing/e2e/README.md"
+type = "file"
+user_modifiable = true
+
+[[kits.resources]]
 id = "fips_requirements"
 kind = "directory"
 source = "docs/security/fips"
