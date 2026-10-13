@@ -76,6 +76,7 @@ relies entirely on the bundled copy from install time.
 | `{toolkit_pr_review_docs}` | `docs/toolkit-pr-review/` | CODE checklist; `workflows/toolkit-review.md` (fallback for the `toolkit-pr-review` skill) | Review |
 | `{architecture_manifest}` | `docs/ARCHITECTURE_MANIFEST.md` | PRD rules/checklist/template, DESIGN checklist, `artifacts/ISO_29148.md` | Both |
 | `{iso_29148}` | `artifacts/ISO_29148.md` | PRD, UPSTREAM_REQS rules | Authoring |
+| `{guidelines_readme}` | `guidelines/README.md` | PRD rules (Operational Concept, NFR sections) — indexes the other `guidelines/*` variables | Authoring |
 | `{repo_adrs}` | `docs/adrs/` | ADR, DESIGN rules | Authoring |
 | `{repo_arch}` | `docs/arch/` | ADR, PRD, DESIGN rules | Authoring |
 | `{repo_playbook}` | `docs/REPO_PLAYBOOK.md` | PRD, UPSTREAM_REQS, DESIGN, DECOMPOSITION rules | Authoring |
@@ -108,6 +109,8 @@ PR tooling, not tied to one artifact kind:
 | `{pr_status_report_template}` | `artifacts/PR-STATUS-REPORT-TEMPLATE/template.md` | `cf-gears-pr-status` output format |
 | `{scripts}` | `scripts/` (directory) | `python3 {scripts}/pr.py`, `{scripts}/prompts/pr/*` |
 | `{change_impact_config}` | `scripts/change-impact-analysis.toml` | `cf-gears-change-impact-analysis` thresholds |
+| `{skill_toolkit_pr_review}` | `.claude/skills/toolkit-pr-review/` (directory) | bundles the real `toolkit-pr-review` skill (its `SKILL.md` and any future sibling files) for standalone installs; `cf-gears-toolkit-review`'s fallback reads it before falling back further to `{toolkit_pr_review_docs}` |
+| `{skill_gear_creator}` | `.claude/skills/gear-creator/` (directory) | bundles the real `gear-creator` skill (its `SKILL.md` and any future sibling files) for standalone installs; `cf-gears-gear-creator`'s fallback reads it before falling back further to `{toolkit_unified_system}` |
 
 Shared chain infrastructure:
 
