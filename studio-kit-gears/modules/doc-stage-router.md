@@ -162,11 +162,14 @@ RULES:
 UNIT GearsDocClose
 PURPOSE: Check the definition of done, report, and offer the next artifact of the chain.
 DO:
-  RUN `cfs validate-toc <GEARS_TARGET_PATH>` and `cfs validate --artifact <GEARS_TARGET_PATH>`
-  RUN check every item of "{gears_doc_phase}#definition-of-done" against those results and the review findings in GEARS_FORWARD_PAYLOAD
-  EMIT a SKILL_RESULT envelope with skill = GEARS_DOC_SKILL, status = completed when every definition-of-done item holds else failed, produced_artifacts = doc-changes for GEARS_TARGET_PATH plus phase-status, report_outputs = the validation result, missing_artifacts = every definition-of-done item that fails (validation errors, unresolved CRITICAL or MAJOR finding IDs, uncovered upstream IDs) or [] when all hold, assumptions = any recorded overrides, and suggested_next_skills = [GEARS_DOC_NEXT_SKILL]
-  SET NEXT_ACTION_PINNED_SKILL = GEARS_DOC_NEXT_SKILL and NEXT_ACTION_PAYLOAD = GEARS_GEAR and GEARS_UPSTREAM_PATH = GEARS_TARGET_PATH, with no GEARS_STAGE or GEARS_TARGET_PATH, so the next preset starts authoring its own document for the same gear, WHEN every definition-of-done item holds
-  SET NEXT_ACTION_PINNED_SKILL = GEARS_DOC_SKILL and NEXT_ACTION_PAYLOAD = GEARS_STAGE validate, GEARS_TARGET_PATH, GEARS_GEAR, plus the failing definition-of-done items WHEN a definition-of-done item fails, so the gate runs again and routes to author or fix from fresh evidence
+  RUN `cfs validate-toc <GEARS_TARGET_PATH>` and `cfs validate --artifact <GEARS_TARGET_PATH>` and keep the result as ci-findings
+  LOAD {cf-studio-path}/.core/skills/studio/modules/runtime/artifact-dod-check.md
+  SET DOD_INPUT_ITEMS = the items of "{gears_doc_phase}#definition-of-done", each normalized to item_id, summary, and required; for the upstream-ID-coverage item, set its coverage_hints to the cross-reference/coverage findings in the ci-findings result above (`cfs validate --artifact` already checks `covered_by` completeness and that every ID reference resolves), so a genuinely-covered artifact has something to match against instead of being marked unclear for lack of a hint
+  SET TARGET_ARTIFACTS = doc-changes (ref GEARS_TARGET_PATH), ci-findings (ref the validation result above), and review-findings (ref GEARS_FORWARD_PAYLOAD)
+  RUN ArtifactDodCheckContract
+  EMIT a SKILL_RESULT envelope with skill = GEARS_DOC_SKILL, status = completed WHEN ARTIFACT_DOD_STATUS == ready else failed, produced_artifacts = doc-changes for GEARS_TARGET_PATH plus phase-status, report_outputs = ARTIFACT_DOD_COVERAGE, missing_artifacts = the ARTIFACT_DOD_COVERAGE entries with coverage_status uncovered or unclear, or [] WHEN ARTIFACT_DOD_STATUS == ready, assumptions = any recorded overrides, and suggested_next_skills = [GEARS_DOC_NEXT_SKILL]
+  SET NEXT_ACTION_PINNED_SKILL = GEARS_DOC_NEXT_SKILL and NEXT_ACTION_PAYLOAD = GEARS_GEAR and GEARS_UPSTREAM_PATH = GEARS_TARGET_PATH, with no GEARS_STAGE or GEARS_TARGET_PATH, so the next preset starts authoring its own document for the same gear, WHEN ARTIFACT_DOD_STATUS == ready
+  SET NEXT_ACTION_PINNED_SKILL = GEARS_DOC_SKILL and NEXT_ACTION_PAYLOAD = GEARS_STAGE validate, GEARS_TARGET_PATH, GEARS_GEAR, plus the uncovered or unclear ARTIFACT_DOD_COVERAGE entries WHEN ARTIFACT_DOD_STATUS == blocked, so the gate runs again and routes to author or fix from fresh evidence
   LOAD {cf-studio-path}/.core/skills/studio/modules/ui/next-actions.md
   RUN NextActionsOffer
 RULES:

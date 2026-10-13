@@ -92,6 +92,7 @@ relies entirely on the bundled copy from install time.
 | `cf-gears-doc-feature` | `{workflow_doc_feature}` | author/review FEATURE |
 | `cf-gears-implement` | `{workflow_implement}` | code from a FEATURE artifact, with `@cpt-*` traceability |
 | `cf-gears-coding` | `{workflow_coding}` | code directly from DESIGN/ADR/PRD/upstream context, no FEATURE/`@cpt-*` |
+| `cf-gears-gear-creator` | `{workflow_gear_creator}` | scaffold a new gear or add a feature to an existing one (DDD-light layers, SDK, OperationBuilder, SecureORM); thin wrapper over the `gear-creator` skill |
 | `cf-gears-change-impact-analysis` | `{workflow_change_impact_analysis}` | read-only downstream impact report for an upstream artifact change |
 | `cf-gears-pr-review` | `{workflow_pr_review}` | SDLC-traceability + guardrail PR review (delegates to `cf-gears-toolkit-review` for its Rust/ToolKit pass) |
 | `cf-gears-pr-status` | `{workflow_pr_status}` | PR status report |

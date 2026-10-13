@@ -76,7 +76,7 @@ DO:
   CONTINUE GearsCodeClose WHEN GEARS_STAGE == close
 RULES:
   ALWAYS forward GEARS_FORWARD_PAYLOAD unchanged as NEXT_ACTION_PAYLOAD to the loaded workflow, so review findings and approvals reach cf-coding-fix
-  ALWAYS use `make gear-ci GEAR=<GEARS_GEAR>` and `make dylint`, plus `cfs validate` when GEARS_CODE_MODE == feature-led, as the remembered project gate commands for cf-coding-ci
+  ALWAYS use `make gear-ci GEAR=<GEARS_GEAR>` and `make dylint`, plus `cfs validate` when GEARS_CODE_MODE == feature-led, plus whatever {testing_policy}'s routing table maps to GEARS_DEPS_CHANGED, GEARS_REST_CHANGED, GEARS_GTS_TOUCHED, GEARS_LIBS_FIPS_TOUCHED, and GEARS_GEAR, as the remembered project gate commands for cf-coding-ci — NEVER run a routed check whose triggering condition is false, and NEVER substitute the routed checks for `gear-ci`/`dylint`
   ALWAYS RUN GearsCodePinNextStage again immediately before the loaded workflow's NextActionsOffer, so the pin reflects the stage outcome and replaces any cf-coding-* pin it set
   ALWAYS end every routed stage through the loaded workflow's completion unit and its NextActionsOffer menu with the pinned GEARS_CODE_SKILL next stage marked (suggested); NEVER end a stage with free prose instead of that menu
 ```
@@ -87,11 +87,16 @@ PURPOSE: Build the kit context block every sub-agent dispatch of this stage must
 DO:
   SET GEARS_DISPATCH_CONTEXT = "Gears kit context (read-only): implementation rules <GEARS_CODE_RULES>; source contract <GEARS_SOURCE_PATH> (the quoted GEARS_SOURCE_CONTEXT when inline); slice <GEARS_SLICE>; gear gears/<GEARS_GEAR>/" WHEN GEARS_STAGE != review
   SET GEARS_DISPATCH_CONTEXT = "Gears kit review methodology (apply in addition to the Studio methodologies, and cite its item IDs in findings): <GEARS_CODE_CHECKLIST>; implementation rules <GEARS_CODE_RULES>; source contract <GEARS_SOURCE_PATH> (the quoted GEARS_SOURCE_CONTEXT when inline); slice <GEARS_SLICE>; gear gears/<GEARS_GEAR>/; mode <GEARS_CODE_MODE>" WHEN GEARS_STAGE == review
-  RUN `git status --porcelain -- <GEARS_SOURCE_PATH> gears/<GEARS_GEAR>/ Cargo.toml Cargo.lock apps/cf-gears-example-server/` (the slice, the gear, and the registration surface named in {gears_code_phase}) and SET GEARS_WORKTREE_DIRTY = true when it lists any path, else false
+  RUN `git status --porcelain -- <GEARS_SOURCE_PATH> gears/<GEARS_GEAR>/ Cargo.toml Cargo.lock apps/cf-gears-example-server/ libs/toolkit/ libs/toolkit-http/ libs/rustls-*/` (the slice, the gear, the registration surface named in {gears_code_phase}, and the FIPS-relevant libs {testing_policy}'s routing table keys on) and SET GEARS_WORKTREE_DIRTY = true when it lists any path, else false
+  SET GEARS_DEPS_CHANGED = true WHEN that status output lists `Cargo.toml` or `Cargo.lock`, else false
+  SET GEARS_REST_CHANGED = true WHEN that status output lists a path under `gears/<GEARS_GEAR>/**/api/rest/` or `gears/<GEARS_GEAR>/**/src/api/`, else false — a narrower proxy for {testing_policy}'s broader "any `.rs` file when the gear exposes REST" condition, by design (see that table's own note)
+  SET GEARS_GTS_TOUCHED = true WHEN the slice touches GTS identifiers, type schemas, well-known instances, discriminator/const-enum-like values, or `x-gts-traits`/`x-gts-traits-schema` (the same condition the `{guidelines_gts}` review bullet already names), else false
+  SET GEARS_LIBS_FIPS_TOUCHED = true WHEN that status output lists a path under `libs/toolkit/`, `libs/toolkit-http/`, or `libs/rustls-*/`, else false
 RULES:
   ALWAYS paste GEARS_DISPATCH_CONTEXT verbatim into the prompt of every sub-agent this stage dispatches (author, coder, test writer, reviewer, bug finder, fixer)
   NEVER dispatch a sub-agent in this stage without GEARS_DISPATCH_CONTEXT
   ALWAYS dispatch a main-context coder (cf-generate-coder-smart, or cf-generate-coder-casual for small slices) instead of the worktree-isolated cf-codegen WHEN GEARS_WORKTREE_DIRTY == true, because an isolated worktree only sees committed files
+  ALWAYS derive GEARS_DEPS_CHANGED, GEARS_REST_CHANGED, GEARS_GTS_TOUCHED, and GEARS_LIBS_FIPS_TOUCHED from the same git status call as GEARS_WORKTREE_DIRTY, never a second scan
 ```
 
 ```pdsl
@@ -125,14 +130,44 @@ RULES:
 UNIT GearsCodeClose
 PURPOSE: Check the definition of done for the slice, report, and offer the next slice.
 DO:
-  RUN `make gear-ci GEAR=<GEARS_GEAR>` and `make dylint` (plus `cfs validate` when GEARS_CODE_MODE == feature-led), then check every item of "{gears_code_phase}#definition-of-done" against those results and the review findings in GEARS_FORWARD_PAYLOAD
-  EMIT a SKILL_RESULT envelope with skill = GEARS_CODE_SKILL, status = completed when every definition-of-done item holds else failed, produced_artifacts = code-changes and unit-tests for GEARS_SLICE plus phase-status, report_outputs = the gate result and the security-boundary evidence recorded for the slice (or the statement that no guardrail was touched), missing_artifacts = every definition-of-done item that fails (failing gate commands, unresolved CRITICAL or MAJOR finding IDs, unmet traceability, missing security-boundary evidence) or [] when all hold, assumptions = any recorded overrides, and suggested_next_skills = [GEARS_CODE_SKILL, cf-git-commit]
-  SET NEXT_ACTION_PINNED_SKILL = GEARS_CODE_SKILL and NEXT_ACTION_PAYLOAD = GEARS_STAGE validate, GEARS_GEAR, GEARS_SOURCE_PATH, GEARS_SOURCE_CONTEXT when set, GEARS_SLICE, GATE_STATUS, plus the failing definition-of-done items WHEN a definition-of-done item fails, so the gate runs again and routes to author or fix from fresh evidence
-  SET NEXT_ACTION_PINNED_SKILL = GEARS_CODE_SKILL and NEXT_ACTION_PAYLOAD = GEARS_STAGE tests, GEARS_GEAR, GEARS_SOURCE_PATH, GEARS_SOURCE_CONTEXT when set WHEN every definition-of-done item holds AND GEARS_SOURCE_PATH still has unimplemented slices
-  SET NEXT_ACTION_PINNED_SKILL = cf-git-commit WHEN every definition-of-done item holds AND every slice of GEARS_SOURCE_PATH is implemented
+  RUN `make gear-ci GEAR=<GEARS_GEAR>` and `make dylint` (plus `cfs validate` when GEARS_CODE_MODE == feature-led) and keep the result as ci-findings
+  LOAD {testing_policy} and RUN every additional local check its routing table maps to GEARS_DEPS_CHANGED, GEARS_REST_CHANGED, GEARS_GTS_TOUCHED, GEARS_LIBS_FIPS_TOUCHED, and GEARS_GEAR for this slice, folding each result into ci-findings — these catch what `gear-ci`/`dylint` alone do not and that CI gates on separately; the routing table is the single source of truth for which command applies to which condition, never duplicated here
+  LOAD {cf-studio-path}/.core/skills/studio/modules/runtime/artifact-dod-check.md
+  SET DOD_INPUT_ITEMS = the items of "{gears_code_phase}#definition-of-done", each normalized to item_id, summary, and required; for the security-boundary-evidence item, set its coverage_hints to the security-boundary evidence recorded for the slice (or the explicit statement that no guardrail was touched), so a genuinely-satisfied item has something to match against instead of being marked unclear for lack of a hint
+  SET TARGET_ARTIFACTS = code-changes (ref GEARS_SLICE), unit-tests (ref the slice's tests), ci-findings (ref the gate result above), and review-findings (ref GEARS_FORWARD_PAYLOAD, summary including the security-boundary evidence or no-guardrail-touched statement)
+  RUN ArtifactDodCheckContract
+  EMIT a SKILL_RESULT envelope with skill = GEARS_CODE_SKILL, status = completed WHEN ARTIFACT_DOD_STATUS == ready else failed, produced_artifacts = code-changes and unit-tests for GEARS_SLICE plus phase-status, report_outputs = ARTIFACT_DOD_COVERAGE plus the security-boundary evidence recorded for the slice (or the statement that no guardrail was touched), missing_artifacts = the ARTIFACT_DOD_COVERAGE entries with coverage_status uncovered or unclear, or [] WHEN ARTIFACT_DOD_STATUS == ready, assumptions = any recorded overrides, and suggested_next_skills = [GEARS_CODE_SKILL, cf-git-commit]
+  SET NEXT_ACTION_PINNED_SKILL = GEARS_CODE_SKILL and NEXT_ACTION_PAYLOAD = GEARS_STAGE validate, GEARS_GEAR, GEARS_SOURCE_PATH, GEARS_SOURCE_CONTEXT when set, GEARS_SLICE, GATE_STATUS, plus the uncovered or unclear ARTIFACT_DOD_COVERAGE entries WHEN ARTIFACT_DOD_STATUS == blocked, so the gate runs again and routes to author or fix from fresh evidence
+  SET NEXT_ACTION_PINNED_SKILL = GEARS_CODE_SKILL and NEXT_ACTION_PAYLOAD = GEARS_STAGE tests, GEARS_GEAR, GEARS_SOURCE_PATH, GEARS_SOURCE_CONTEXT when set WHEN ARTIFACT_DOD_STATUS == ready AND GEARS_SOURCE_PATH still has unimplemented slices
+  SET GEARS_LAST_FEATURE_IN_CHAIN = true WHEN ARTIFACT_DOD_STATUS == ready AND every slice of GEARS_SOURCE_PATH is implemented AND GEARS_CODE_MODE == design-led, else false — design-led mode has no DECOMPOSITION/FEATURE layer above it, so "every slice of this run's source implemented" already is the whole planned scope; NEVER treat a missing backreference in feature-led mode the same way (see next line)
+  SET GEARS_LAST_FEATURE_IN_CHAIN = true WHEN ARTIFACT_DOD_STATUS == ready AND every slice of GEARS_SOURCE_PATH is implemented AND GEARS_CODE_MODE == feature-led AND resolving GEARS_SOURCE_PATH's DECOMPOSITION backreference (a required field on every FEATURE per `{gears_code_phase}`'s source rules, not optional) to the gear's `DECOMPOSITION.md` shows every feature entry there as `[x]` — leave GEARS_LAST_FEATURE_IN_CHAIN at its already-set false WHEN the backreference can't be resolved; a FEATURE missing its required backreference is a structural problem `cfs validate` should already have caught upstream, not a signal to treat this as chain-complete
+  RUN GearsCodeChainSweep WHEN GEARS_LAST_FEATURE_IN_CHAIN
+  SET NEXT_ACTION_PINNED_SKILL = cf-git-commit WHEN ARTIFACT_DOD_STATUS == ready AND every slice of GEARS_SOURCE_PATH is implemented AND (GEARS_LAST_FEATURE_IN_CHAIN == false OR GEARS_CHAIN_SWEEP_STATUS == ready)
+  SET NEXT_ACTION_PINNED_SKILL = GEARS_CODE_SKILL and NEXT_ACTION_PAYLOAD = GEARS_STAGE validate, GEARS_GEAR, plus GEARS_SOURCE_PATH and GEARS_SLICE taken from the first GEARS_CHAIN_SWEEP_FINDING that names a FEATURE/slice (never the just-closed GEARS_SOURCE_PATH/GEARS_SLICE — the finding may implicate a different FEATURE entirely), plus the canonical `review-findings` artifact carrying every remaining GEARS_CHAIN_SWEEP_FINDING for the next round (never a GEARS_*-named field for this — GearsCodeStageResolve strips GEARS_* fields when building GEARS_FORWARD_PAYLOAD, which would silently drop them), WHEN GEARS_LAST_FEATURE_IN_CHAIN AND GEARS_CHAIN_SWEEP_STATUS == blocked AND at least one finding names a FEATURE/slice
+  SET NEXT_ACTION_PINNED_SKILL = GEARS_DOC_SKILL_DESIGN (`cf-gears-doc-design`) and NEXT_ACTION_PAYLOAD = GEARS_GEAR, GEARS_UPSTREAM_PATH = the gear's `DESIGN.md`, plus the canonical `review-findings` artifact carrying every GEARS_CHAIN_SWEEP_FINDING that names DESIGN/DECOMPOSITION itself rather than a specific FEATURE (never a GEARS_*-named field — same stripping risk as above), WHEN GEARS_LAST_FEATURE_IN_CHAIN AND GEARS_CHAIN_SWEEP_STATUS == blocked AND no finding names a FEATURE/slice — a DESIGN-level contradiction has no code fix to route to
   LOAD {cf-studio-path}/.core/skills/studio/modules/ui/next-actions.md
   RUN NextActionsOffer
 RULES:
   ALWAYS list remaining MINOR review findings in the close report
   NEVER mark the slice done while a gate command fails or a CRITICAL or MAJOR finding is unresolved
+  NEVER run a {testing_policy}-routed check whose triggering condition is false for this slice — the routing table decides what's relevant; this unit never re-runs every CI lane on every close
+  ALWAYS run GearsCodeChainSweep when GEARS_LAST_FEATURE_IN_CHAIN is true, even if every per-slice check up to now has passed — per-slice closes only ever checked one FEATURE against DESIGN as it stood when that slice was authored, never the whole realized chain against each other
+```
+
+```pdsl
+UNIT GearsCodeChainSweep
+PURPOSE: When the gear's whole planned FEATURE set just finished, sweep the whole realized chain for drift and run the fuller local CI pass once — neither of which any single slice's close ever does. Implements the chain-reconciliation option named in gears-rust#5195 ("Fix drift across chain artifacts") at the one point a reconciliation pass is guaranteed to have something complete to reconcile against.
+STATE:
+  SET GEARS_CHAIN_SWEEP_STATUS: ready | blocked | unset (default unset, scope workflow_run)
+  SET GEARS_CHAIN_SWEEP_FINDING: list | unset (default unset, scope workflow_run)
+DO:
+  RUN `make check GEAR=<GEARS_GEAR>` (fmt, clippy, full test suite, `make deny` — not the narrower per-slice `gear-ci`) and fold the result into ci-findings; consult {testing_policy} for whether this gear's heavier lanes (`test-fips`, `test-graph-storage`, `test-onnx-embedding`, `test-magika`, e2e) apply and run those too, since this is the point a partial local pass stops being good enough
+  RUN a semantic re-review of the gear's `DESIGN.md` against its now-complete `DECOMPOSITION.md` and every `FEATURE*.md`, applying `{design_checklist}`'s SEM-DESIGN-002 (DECOMPOSITION coverage) and SEM-DESIGN-003 (ADR consistency) sections one more time against the realized set — not the authoring-time snapshot each FEATURE's own close checked against; this is the only point that catches a DESIGN amendment made for a later FEATURE silently invalidating an earlier one's already-closed slice
+  SET GEARS_CHAIN_SWEEP_STATUS = ready WHEN the fuller CI pass is green AND the re-review surfaces no CRITICAL or MAJOR finding, else blocked
+  SET GEARS_CHAIN_SWEEP_FINDING = every CRITICAL or MAJOR finding from the re-review, plus any failing fuller-CI command, each carrying an explicit target (the specific FEATURE path and implicated slice/ID, or `DESIGN` when the contradiction is in DESIGN/DECOMPOSITION itself rather than any one FEATURE's realization of it), WHEN GEARS_CHAIN_SWEEP_STATUS == blocked, else []
+RULES:
+  ALWAYS run this exactly once per completed FEATURE set, not once per slice
+  ALWAYS give every GEARS_CHAIN_SWEEP_FINDING an explicit target; GearsCodeClose routes on it and cannot re-route a finding with no target without guessing
+  NEVER skip the re-review because every individual slice already passed its own close — that's precisely the drift this sweep exists to catch
+  NEVER silently absorb a chain-sweep finding into a normal slice-level fix; route it back through validate on the FEATURE whose slice the finding actually implicates, named explicitly
 ```
