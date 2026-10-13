@@ -109,9 +109,9 @@ PR tooling, not tied to one artifact kind:
 | `{pr_status_report_template}` | `artifacts/PR-STATUS-REPORT-TEMPLATE/template.md` | `cf-gears-pr-status` output format |
 | `{scripts}` | `scripts/` (directory) | `python3 {scripts}/pr.py`, `{scripts}/prompts/pr/*` |
 | `{change_impact_config}` | `scripts/change-impact-analysis.toml` | `cf-gears-change-impact-analysis` thresholds |
-| `{skill_toolkit_pr_review}` | `.claude/skills/toolkit-pr-review/` (directory) | bundles the real `toolkit-pr-review` skill (its `SKILL.md` and any future sibling files) for standalone installs; `cf-gears-toolkit-review`'s fallback reads it before falling back further to `{toolkit_pr_review_docs}` |
-| `{skill_gear_creator}` | `.claude/skills/gear-creator/` (directory) | bundles the real `gear-creator` skill (its `SKILL.md` and any future sibling files) for standalone installs; `cf-gears-gear-creator`'s fallback reads it before falling back further to `{toolkit_unified_system}` |
-| `{agent_toolkit_pr_review_architecture}` … `{agent_toolkit_pr_review_toolkit}` (7 resources) | `.claude/agents/toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}.md` | the real definitions `toolkit-pr-review`'s 7 sub-agents dispatch to — bundled since a standalone install's own agent-discovery may not see them; `cf-gears-toolkit-review`'s fallback reads each for its rule-module assignment |
+| `{skill_toolkit_pr_review}` | `.claude/skills/toolkit-pr-review/` (directory) | bundles the real `toolkit-pr-review` skill (its `SKILL.md` and any future sibling files) for standalone installs; this is exactly what `cf-gears-toolkit-review`'s single `LOAD .../FOLLOW` instruction resolves to |
+| `{skill_gear_creator}` | `.claude/skills/gear-creator/` (directory) | bundles the real `gear-creator` skill (its `SKILL.md` and any future sibling files) for standalone installs; this is exactly what `cf-gears-gear-creator`'s single `LOAD .../FOLLOW` instruction resolves to |
+| `{agent_toolkit_pr_review_architecture}` … `{agent_toolkit_pr_review_toolkit}` (7 resources) | `.claude/agents/toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}.md` | the real definitions `toolkit-pr-review`'s 7 sub-agents dispatch to — bundled since a standalone install's own agent-discovery may not see them |
 
 Shared chain infrastructure:
 

@@ -162,66 +162,58 @@ proceed from the repo's own files when it's missing rather than treating it as a
 
 ## Scenario 6 — `cf-gears-toolkit-review` workflow + `{skill_toolkit_pr_review}` bundling, live, pinned PR
 
-**Design note (two false starts corrected here)**: first pass bundled only
+**Design note (three false starts corrected here)**: pass 1 bundled only
 `docs/toolkit-pr-review` (the rule docs) and wrote a wrapper workflow that restated the
-skill's routing/invariants inline — too fat, not actually delegating. Second pass swung too
-far the other way: deleted the wrapper entirely and had every caller invoke the
-`toolkit-pr-review`/`gear-creator` skills directly, reasoning that since the skills are
-already `user-invocable: true`, no kit-level wrapper was needed at all. Final, correct
-shape: **both** layers exist — `{skill_toolkit_pr_review}`/`{skill_gear_creator}` bundle the
-real `SKILL.md` files as manifest resources (so a standalone install actually has them, not
-just their rule docs), and `cf-gears-toolkit-review`/`cf-gears-gear-creator` remain thin
-wrapper workflows that invoke those skills and carry only what genuinely doesn't belong in a
-repo-wide, kit-independent skill: Studio routing (vs. `cf-gears-pr-review`/`cf-gears-implement`),
-and the standalone-fallback instruction to read the now-bundled real skill file directly
-when the skill isn't live-invocable.
+skill's routing/invariants inline — too fat. Pass 2 swung too far the other way: deleted the
+wrapper entirely and had every caller invoke `toolkit-pr-review`/`gear-creator` directly,
+losing Studio routing. Pass 3 kept both layers but still wrote Routing tables, an Overview,
+numbered Steps, a multi-paragraph Fallback section, Validation Criteria, and Next Steps —
+still too much ceremony for what should be a pass-through. **Final shape**: the wrapper is
+the frontmatter plus exactly one instruction — `LOAD {skill_toolkit_pr_review} and FOLLOW
+all of its instructions, passing through whatever parameters were given`. No Fallback
+section exists because none is needed: LOAD+FOLLOW behaves identically whether the skill is
+"live-invocable" or only present as the bundled file — that was a false dichotomy from
+pass 3, not a real one.
 
-> In `<WORKTREE_PATH>`, read `studio-kit-gears/workflows/toolkit-review.md` in full, then
-> execute it in local mode against the same reconstructed-local-branch for PR **#5213** as
-> Scenario 4 (reuse that reconstruction). Confirm the workflow's own prose reads clearly
-> enough to execute without guessing, and that invoking the underlying skill through this
-> wrapper produces the same quality of grounded findings as Scenario 4's direct call (don't
-> just trust it — compare the findings). Confirm the `--base <REF>` passthrough is actually
-> honored. Separately, run `cfs resolve-vars --kit gears --flat` and confirm
-> `{skill_toolkit_pr_review}`/`{skill_gear_creator}` resolve to the real
-> `.claude/skills/{toolkit-pr-review,gear-creator}/` directories (directory resources, not
-> single-file, specifically so a future sibling file added to either skill folder is
-> bundled automatically rather than silently missed) — confirm each contains a `SKILL.md`
-> matching the live file byte-for-byte, and list any other files present (none expected
-> today; flag if that's changed and the manifest wasn't updated to match). Confirm both
-> wrapper files' Fallback sections actually cite those variables (not just the
-> rule-docs/chapter fallback). Report pass/fail. Under 250 words.
+> In `<WORKTREE_PATH>`, read `studio-kit-gears/workflows/toolkit-review.md` in full — confirm
+> it is genuinely minimal (frontmatter + the bootstrap line + one `LOAD .../FOLLOW` sentence,
+> nothing else) — then execute it in local mode against the same reconstructed-local-branch
+> for PR **#5213** as Scenario 4 (reuse that reconstruction), passing the same arguments
+> Scenario 4 used directly to `toolkit-pr-review`. Confirm invoking through this wrapper
+> produces the same quality of grounded findings as Scenario 4's direct call (don't just
+> trust it — compare the findings) and that the `--base <REF>` passthrough still works.
+> Separately, run `cfs resolve-vars --kit gears --flat` and confirm
+> `{skill_toolkit_pr_review}` resolves to the real `.claude/skills/toolkit-pr-review/`
+> directory, matching the live file byte-for-byte. Report pass/fail. Under 200 words.
 
 **Expected**: PASS, output indistinguishable from Scenario 4's direct skill call, `--base`
-passthrough actually changes behavior, both bundled skill variables resolve to real matching
-content, both wrappers' Fallback sections cite them. (Last confirmed, before this redesign's
-final pass: PASS on the workflow/`--base` half — empirically verified `--base` matters by
-running both with and without it: without, `review.py prepare --local` resolved base to the
-branch's own tip since the reconstructed branch is already an ancestor of `main`, yielding 0
-files/0 agents — exactly the failure mode the workflow's own docs warn about; with `--base`
-pointed at the PR's merge-parent commit, 5 files + 7 agents ran correctly, 3 grounded
-findings including a CRITICAL `RUST-SEC-001`. Re-confirm the bundling half specifically,
-since the Fallback sections were rewritten after that run to cite the new variables.)
+passthrough still works, file stays minimal (no regression back toward Routing
+tables/Fallback essays/Validation Criteria). (Last confirmed, on the previous
+heavier-wrapper shape: PASS — empirically verified `--base` matters by running both with and
+without it: without, `review.py prepare --local` resolved base to the branch's own tip since
+the reconstructed branch is already an ancestor of `main`, yielding 0 files/0 agents; with
+`--base` pointed at the PR's merge-parent commit, 5 files + 7 agents ran correctly, 3
+grounded findings including a CRITICAL `RUST-SEC-001`. Re-confirm on the now-minimal file.)
 
 ## Scenario 7 — `cf-gears-gear-creator` workflow, live, pinned edit
 
-> In `<WORKTREE_PATH>`, read `studio-kit-gears/workflows/gear-creator.md` in full, then
-> exercise Step 2 (invoke the `gear-creator` skill per the wrapper's instructions) against
-> this exact pinned edit: add field `min_display_name_length: usize` (default `1`) to `pub
-> struct ServiceConfig` in `examples/toolkit/users-info/users-info/src/domain/service/mod.rs`,
-> plus the required call-site update in
-> `examples/toolkit/users-info/users-info/src/gear.rs`'s `ServiceConfig` struct literal (no
-> `..Default::default()` there, so the new field must be added explicitly). Confirm `git
-> status --porcelain` is clean before starting. Confirm the wrapper's routing/overview/steps
-> are followed as written, that Step 3's verify commands match what the wrapper actually
-> names, and run them scoped to `users-info` (`cargo build`, `cargo clippy`, `cargo gears
-> lint --dylint` i.e. `make dylint`, `cargo test`). Discard via `git checkout -- .` when
-> done; confirm `git status --porcelain` is clean afterward. Report pass/fail. Under 250
-> words.
+> In `<WORKTREE_PATH>`, read `studio-kit-gears/workflows/gear-creator.md` in full — confirm
+> it is genuinely minimal (frontmatter + the bootstrap line + one `LOAD .../FOLLOW`
+> sentence, nothing else) — then exercise it (load `{skill_gear_creator}` and follow it)
+> against this exact pinned edit: add field `min_display_name_length: usize` (default `1`)
+> to `pub struct ServiceConfig` in
+> `examples/toolkit/users-info/users-info/src/domain/service/mod.rs`, plus the required
+> call-site update in `examples/toolkit/users-info/users-info/src/gear.rs`'s `ServiceConfig`
+> struct literal (no `..Default::default()` there, so the new field must be added
+> explicitly). Confirm `git status --porcelain` is clean before starting. Run the real
+> skill's own verify step scoped to `users-info` (`cargo build`, `cargo clippy`, `cargo
+> gears lint --dylint` i.e. `make dylint`, `cargo test`). Discard via `git checkout -- .`
+> when done; confirm `git status --porcelain` is clean afterward. Report pass/fail. Under
+> 200 words.
 
 **Expected**: PASS. All 4 verify commands green, scoped to `users-info`; edit applied then
-cleanly discarded; wrapper's prose followed without guessing. (Last confirmed: PASS, on this
-exact pinned edit, with the wrapper present and correctly routed to.)
+cleanly discarded; file stays minimal. (Last confirmed: PASS, on this exact pinned edit, on
+the previous heavier-wrapper shape — re-confirm on the now-minimal file.)
 
 ## Scenario 8 — Smart CI routing: fact-detection and `{testing_policy}` routing
 
