@@ -97,8 +97,12 @@ def main():
             f"{canary} is missing but guidelines/DNA is a registered submodule here; "
             "initializing it now..."
         )
+        # --force: the submodule may already be checked out at the right commit
+        # with just one file locally deleted/modified (not "never fetched" at
+        # all) — a plain `update --init` is then a no-op against that file and
+        # this would falsely report failure.
         result = subprocess.run(
-            ["git", "submodule", "update", "--init", "--recursive", "--", "guidelines/DNA"],
+            ["git", "submodule", "update", "--init", "--recursive", "--force", "--", "guidelines/DNA"],
             cwd=root,
         )
         # Re-resolve: initializing the submodule doesn't move it, but a `cfs`-less

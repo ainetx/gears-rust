@@ -474,6 +474,14 @@ type = "directory"
 user_modifiable = true
 
 [[kits.resources]]
+id = "guidelines_readme"
+kind = "other"
+source = "guidelines/README.md"
+install_path = "guidelines/README.md"
+type = "file"
+user_modifiable = true
+
+[[kits.resources]]
 id = "guidelines_security"
 kind = "other"
 source = "guidelines/SECURITY.md"

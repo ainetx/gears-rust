@@ -27,6 +27,23 @@ command that mutates state (checkout/branch/commit/stash/reset) in a shared work
 without first confirming no other session is using it.** Collect results into the
 pass/fail table in "Reporting" below.
 
+**Isolation note (confirmed, not hypothetical — see PR #5326's history)**: Scenarios 4-7
+involve checking out a branch/commit or making a reversible edit, so dispatch them with
+the `Agent` tool's `isolation: "worktree"` option rather than running them in the shared
+worktree directly. That isolated worktree is **not guaranteed to start from this branch's
+tip** — one run defaulted to a stale pre-PR commit (`8c3952dab`), silently missing every
+file this PR added. Two of the three agents affected did NOT notice and fell back to
+testing something adjacent while reporting it as if the real target had been tested
+(scenario 6 re-ran the underlying skill and reported scenario-4-shaped results; scenario 7
+honestly flagged the missing file and used its documented fallback instead). Only scenario
+5 caught and reported the mismatch outright. **Always instruct scenarios 4-7's agents to
+first run `git fetch fork gears-kit/wire-repo-wide-conventions && git checkout
+fork/gears-kit/wire-repo-wide-conventions` (or whatever branch is current) and verify via
+`git log --oneline -3` plus `ls studio-kit-gears/workflows/` that the expected new files
+are actually present, before proceeding** — and tell the agent explicitly not to silently
+substitute a different target if the expected file is missing; it should stop and report
+that instead.
+
 ---
 
 ## Scenario 1 — Repo-wide `{variable}` citations resolve to real, matching content
@@ -53,6 +70,14 @@ re-confirm it specifically on the next pass.)
 
 ## Scenario 2 — `ensure-dna.py`, all 3 real install states
 
+**Do not run this scenario in parallel with any other scenario that reads
+`guidelines/DNA/languages/RUST.md` in the same `<WORKTREE_PATH>` (Scenario 3, most
+directly).** This scenario briefly renames that real file in the shared worktree; running
+concurrently with a reader produced a false finding once already (a `cfs kit install` from
+Scenario 3 observed the mid-rename state and reported a missing resource that was never
+actually missing — a test-harness race, not a kit bug). Either run it alone, or serialize it
+before/after any scenario touching the same path.
+
 > In `<WORKTREE_PATH>`, run `python3 studio-kit-gears/scripts/ensure-dna.py` and report
 > its exact output and exit code (submodule state: whatever it currently is — note it).
 > Then, in an isolated scratch directory (NOT `<WORKTREE_PATH>`, create a fresh one under
@@ -67,9 +92,13 @@ re-confirm it specifically on the next pass.)
 > auto-init when registered-but-missing, (c) standalone-no-submodule gives the distinct
 > error. Under 250 words.
 
-**Expected**: all 3 PASS. (Last confirmed: all PASS, see PR #5326; this script itself
-was fixed once already after this exact test caught it resolving paths wrong under
-copy-mode installs — Scenario 3 covers that case.)
+**Expected**: all 3 PASS. (Last confirmed: (a)/(c) PASS, (b) initially PARTIAL — a second
+real bug found by this exact test: when the submodule is already checked out at the right
+commit but one file is locally deleted, plain `git submodule update --init` is a no-op
+against that file, so the script falsely reported failure. Fixed by adding `--force` to the
+remediation command. This script has now been fixed twice by this exact scenario: once for
+copy-mode path resolution — Scenario 3 covers that case — and once for this single-file-
+deleted case. Re-run to confirm all 3 PASS cleanly post-fix.)
 
 ## Scenario 3 — Standalone copy-mode install bundles everything with real content
 
@@ -123,10 +152,13 @@ path-resolution bug (Scenario 2) shows this install mode is exactly where a reso
 > sections from real findings, not generic filler. Report pass/fail and the final
 > verdict reached. Under 300 words.
 
-**Expected**: PASS, Architecture section present, step 4c3 fires via `cf-gears-toolkit-review`,
-verdict ✅ APPROVE (mechanical lint-compliance fix). (Last confirmed: PR #5326, though at
-that time step 4c3 still named the underlying skill directly — re-confirm the delegation
-wording specifically, since that changed after this test last ran.)
+**Expected**: PASS, Architecture section present, step c3 fires via `cf-gears-toolkit-review`,
+verdict ✅ APPROVE. (Last confirmed: PASS. Found HIGH `RUST-TYPE-001` — the `FromStr`
+refactor loses a compile-time duplicate-GTS-id guard — and LOW `TEST-QUALITY-5`; neither
+merge-blocking. Confirmed step c3's wording explicitly delegates to `cf-gears-toolkit-review`
+and never calls `toolkit-pr-review` directly. Note: `{cf-studio-path}/.core/` is an
+untracked runtime cache, absent by default in a fresh isolated worktree — not a kit bug,
+proceed from the repo's own files when it's missing rather than treating it as a blocker.)
 
 ## Scenario 6 — `cf-gears-toolkit-review` workflow, live, pinned PR
 
@@ -139,26 +171,37 @@ wording specifically, since that changed after this test last ran.)
 > <REF>` passthrough this workflow documents is actually honored. Report pass/fail. Under
 > 200 words.
 
-**Expected**: PASS, output indistinguishable from Scenario 4's direct skill call. (Last
-confirmed: PR #5326.)
+**Expected**: PASS, output indistinguishable from Scenario 4's direct skill call, `--base`
+passthrough actually changes behavior (not silently ignored). (Last confirmed: PASS —
+empirically verified `--base` matters by running both with and without it: without,
+`review.py prepare --local` resolved base to the branch's own tip since the reconstructed
+branch is already an ancestor of `main`, yielding 0 files/0 agents — exactly the failure
+mode the workflow's own docs warn about; with `--base` pointed at the PR's merge-parent
+commit, 5 files + 7 agents ran correctly. 3 grounded findings, including a CRITICAL
+`RUST-SEC-001` not caught by Scenario 4's run.)
 
 ## Scenario 7 — `cf-gears-gear-creator` workflow, live
 
-> **Not yet run as a live scenario** — `studio-kit-gears/workflows/gear-creator.md` was
-> added and reviewed statically but never exercised end-to-end. Read it in full, then
-> exercise Step 2 (invoke the `gear-creator` skill) against a small, low-risk edit: add
-> one trivial new field to `examples/toolkit/users-info/users-info/src/domain/service/`
-> (check the actual file layout first — do not invent a path) under a scratch branch, NOT
-> committed, then `git checkout -- .` to discard it when done (confirm `git status
-> --porcelain` is clean before you start, so you know exactly what to discard). Confirm
-> the skill was actually invoked (not silently skipped) and that Step 3's verify commands
-> (`cargo build`, `cargo clippy`, `make dylint`, `cargo test`, scoped to the touched
-> crate) are the ones actually named. Report pass/fail. This scenario's PASS bar is
-> lower — it's establishing a first baseline, not comparing against a prior confirmed
-> run.
+> Exercise Step 2 (invoke the `gear-creator` skill per `studio-kit-gears/workflows/gear-creator.md`'s
+> instructions, read in full first) against this exact pinned edit: add field
+> `min_display_name_length: usize` (default `1`) to `pub struct ServiceConfig` in
+> `examples/toolkit/users-info/users-info/src/domain/service/mod.rs`, plus the required
+> call-site update in `examples/toolkit/users-info/users-info/src/gear.rs`'s `ServiceConfig`
+> struct literal (no `..Default::default()` there, so the new field must be added
+> explicitly). Confirm `git status --porcelain` is clean before starting. Confirm the
+> wrapper's routing/overview/steps are followed as written, that Step 3's verify commands
+> match what the wrapper actually names, and run them scoped to `users-info` (`cargo
+> build`, `cargo clippy`, `cargo gears lint --dylint` i.e. `make dylint`, `cargo test`).
+> Discard via `git checkout -- .` when done; confirm `git status --porcelain` is clean
+> afterward. Report pass/fail. Under 250 words.
 
-**Expected**: unestablished — first run. Once it passes once, pin the exact edit made
-here (not "a trivial field") so future re-runs are comparable.
+**Expected**: PASS. All 4 verify commands green (`cargo build`/`clippy`/`dylint`/`test`,
+scoped to `users-info`); edit applied then cleanly discarded. (Last confirmed: PASS — this
+exact edit, first baseline established. A prior run of just the underlying `gear-creator`
+skill, without this wrapper file present at all, already separately confirmed the skill
+and verify commands work on this same pinned edit — see PR #5326's history — so this
+scenario's bar is specifically the wrapper's own prose/routing, not the skill's raw
+behavior.)
 
 ## Scenario 8 — Smart CI routing: fact-detection and `{testing_policy}` routing
 
