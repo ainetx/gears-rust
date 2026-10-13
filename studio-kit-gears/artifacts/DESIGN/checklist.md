@@ -348,6 +348,13 @@ Before evaluating each checklist item, the expert MUST:
 - [ ] Design references to ADRs are complete and do not omit critical decisions
 - [ ] Any deviation from ADR decisions is explicitly justified and approved
 
+### SEM-DESIGN-005: DECOMPOSITION/FEATURE Realization Consistency
+**Severity**: CRITICAL
+
+- [ ] Every realized DECOMPOSITION feature entry and FEATURE document is still consistent with DESIGN's components, constraints, principles, and sequences as DESIGN currently reads — not as DESIGN stood when that FEATURE was authored
+- [ ] A DESIGN amendment made after an earlier FEATURE's slice was already closed does not silently invalidate that slice's already-implemented behavior
+- [ ] DECOMPOSITION's feature boundaries still match DESIGN's current component boundaries; no component was split, merged, or reassigned in DESIGN without DECOMPOSITION being updated to match
+
 ---
 
 ## ⚡ PERFORMANCE Expertise (PERF)
