@@ -31,11 +31,13 @@ differs. When `{toolkit_pr_review_docs}`/`{toolkit_pr_review_scripts}` resolve t
 same literal `docs/toolkit-pr-review`/`tools/scripts/toolkit-pr-review` the skill's text
 already assumes (the in-repo case), this is a no-op.
 
-Each sub-agent's own file also hardcodes its rule-module and companion-agent path as a
-literal `docs/toolkit-pr-review/...` string — wrong after a standalone copy-mode install,
-and a sub-agent dispatch never inherits this session's own path resolution above. Every time
-you dispatch any sub-agent, append this line to its dispatch prompt, filled in with the real
-resolved path: "Your own file names `docs/toolkit-pr-review/rules/<name>.md` and
-`docs/toolkit-pr-review/agents/subject.md` — actually read them at `<resolved
-{toolkit_pr_review_docs}>/rules/<name>.md` and `<resolved {toolkit_pr_review_docs}>/agents/
-subject.md` instead."
+Each sub-agent's own file hardcodes its own `docs/toolkit-pr-review/...` paths too (which
+ones differ per sub-agent — e.g. the architecture one names only its own `agents/
+architecture.md`, the six subject ones name `rules/<name>.md` plus `agents/subject.md`,
+and `agents/subject.md` itself then names two more, `review-conventions.md` and
+`comment-style.md`, once the dispatched agent reads it) — all wrong after a standalone
+copy-mode install, and none of it is inherited from this session's own path resolution
+above. Every time you dispatch any sub-agent, append this line to its dispatch prompt:
+"Every `docs/toolkit-pr-review/...` path you encounter — in your own file or in any file you
+go on to read — actually resolves under `<resolved {toolkit_pr_review_docs}>` instead of the
+repository root; read it there instead."
