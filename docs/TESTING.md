@@ -595,8 +595,8 @@ The CI `lint` job applies the architecture lints to the workspace on every PR.
 
 | Tool | Purpose | Command | CI job |
 |------|---------|---------|--------|
-| **clippy** | Lint for correctness and performance | `make clippy` | `test` |
-| **rustfmt** | Formatting enforcement | `make fmt` | `test` |
+| **clippy** | Lint for correctness and performance | `make clippy` | `clippy` (ci.yml) |
+| **rustfmt** | Formatting enforcement | `make fmt` | `fmt.yml` (separate workflow, not a `ci.yml` job) |
 | **cargo gears lint** | Project-specific architectural lints (layer separation, DTO placement) | `cargo gears lint` | `lint` |
 | **cargo-deny** | License compliance, advisories, banned crates | `make deny` | `security` |
 | **cargo-kani** | Formal verification of unsafe code and invariants | `make kani` | none — not invoked by any workflow today; local/manual only despite `make safety` bundling it |
