@@ -586,6 +586,14 @@ type = "directory"
 user_modifiable = true
 
 [[kits.resources]]
+id = "toolkit_pr_review_scripts"
+kind = "script"
+source = "tools/scripts/toolkit-pr-review"
+install_path = "tools/scripts/toolkit-pr-review"
+type = "directory"
+user_modifiable = true
+
+[[kits.resources]]
 id = "repo_adrs"
 kind = "directory"
 source = "docs/adrs"

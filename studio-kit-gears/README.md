@@ -74,11 +74,13 @@ relies entirely on the bundled copy from install time.
 | `{fips_requirements}` | `docs/security/fips/` | CODE rules/checklist, DESIGN, PRD rules (FIPS-touching work only) | Both |
 | `{guidelines_gts}` | `guidelines/GTS.md` | CODE, DESIGN checklist (review-only; not loaded at authoring) | Review |
 | `{toolkit_pr_review_docs}` | `docs/toolkit-pr-review/` | CODE checklist | Review |
+| `{toolkit_pr_review_scripts}` | `tools/scripts/toolkit-pr-review/` | `{skill_toolkit_pr_review}`'s own mandatory `review.py prepare` step (see its `SKILL.md`) | Review |
 | `{architecture_manifest}` | `docs/ARCHITECTURE_MANIFEST.md` | PRD rules/checklist/template, DESIGN checklist, `artifacts/ISO_29148.md` | Both |
 | `{iso_29148}` | `artifacts/ISO_29148.md` | PRD, UPSTREAM_REQS rules | Authoring |
 | `{guidelines_readme}` | `guidelines/README.md` | PRD rules (Operational Concept, NFR sections) — indexes the other `guidelines/*` variables | Authoring |
 | `{repo_adrs}` | `docs/adrs/` | ADR, DESIGN rules | Authoring |
-| `{repo_arch}` | `docs/arch/` | ADR, PRD, DESIGN rules | Authoring |
+| `{repo_arch}` | `docs/arch/` | CODE, ADR, PRD, DESIGN rules | Authoring |
+| `{e2e_guide}` | `testing/e2e/README.md` | CODE rules (how to actually run the E2E suite) | Authoring |
 | `{repo_playbook}` | `docs/REPO_PLAYBOOK.md` | PRD, UPSTREAM_REQS, DESIGN, DECOMPOSITION rules | Authoring |
 
 ## Workflows
@@ -127,7 +129,7 @@ Shared chain infrastructure:
 | `{gears_doc_phase}` | `plans/doc-phase.md` | phase-plan/phase-dod for doc presets, no separate planning session needed |
 | `{gears_code_phase}` | `plans/code-phase.md` | same, for code presets |
 
-60 kit-scoped variables in total (plus 6 Studio-system ones — `{cf-studio-path}`,
+61 kit-scoped variables in total (plus 6 Studio-system ones — `{cf-studio-path}`,
 `{project_root}`, `{repo}`, `{base_dir}`, `{master_repo}`, `{cfs_cmd}` — that are not
 kit resources; `{cfs_cmd}` resolves to the Studio CLI invocation via the root router's
 own `CommandResolution`, same as every `{cfs_cmd} ...` command used throughout this doc).

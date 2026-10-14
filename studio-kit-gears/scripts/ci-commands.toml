@@ -22,9 +22,14 @@
 # GearsCodeClose/GearsCodeChainSweep already treat an empty mapped command as
 # a no-op, not an error.
 #
-# <GEAR> and <SUITE> are substituted by the calling PDSL unit before the
-# command is run; they are plain per-invocation placeholders, not `{variable}`
-# kit-manifest references (resolved separately via `cfs resolve-vars`).
+# <GEAR> is substituted by the calling PDSL unit before the command is run; it
+# is a plain per-invocation placeholder, not a `{variable}` kit-manifest
+# reference (resolved separately via `cfs resolve-vars`). `e2e_local` below
+# deliberately uses `run_e2e.py`'s `--gear` discovery mode (every e2e-launcher
+# suite whose Cargo features include this gear, no-op if none match) rather
+# than `--suite`, since GEARS_GEAR is the only value the calling PDSL unit
+# actually tracks — there is no mechanical GEAR -> SUITE mapping (suite names
+# under testing/e2e/suites/ don't consistently mirror gear directory names).
 #
 # The defaults below are this repository's own real commands — confirmed
 # against the live Makefile and docs/TESTING.md §7.4 at the time this file was
@@ -55,4 +60,4 @@ test_graph_storage = "make test-graph-storage"
 test_onnx_embedding_plugin = "cargo test -p cf-gears-graph-storage-onnx-embedding-plugin"
 test_onnx_embedding_compile_check = "cargo check -p cf-gears-graph-storage --features onnx"
 test_magika = "cargo test -p cf-gears-file-parser --features magika"
-e2e_local = "make e2e-local SUITE=<SUITE>"
+e2e_local = "make e2e-local GEAR=<GEAR>"
