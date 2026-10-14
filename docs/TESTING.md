@@ -464,17 +464,27 @@ component-independent signals it shares with every other such job: any
 fail-open run if the `changes` job itself doesn't succeed. These two are omitted from each
 job's own parenthetical below to avoid repeating them five times; they apply to all five.
 
+`clippy`/`test`/`integration`/`coverage` are gated too — each has its own
+`if: ... rust=='true' || ci=='true' ...` condition, same shape as the five jobs above (plus
+`workflow_dispatch`/changes-job-failed fail-open) — just keyed on the broader `rust` filter
+(any `**/*.rs`, `**/Cargo.toml`, `Cargo.lock`, `Makefile`, `rust-toolchain.toml`, `.cargo/**`)
+instead of a narrow component path. Only `lint` genuinely has no `if:` at all. "(always)"
+below means "whenever this workflow runs at all" **only** for `lint`; every other job's
+"(always)" instead means "on `rust` or `ci`, which in practice covers almost every
+non-doc-only PR" — call it out explicitly rather than reusing the same word for two
+different guarantees.
+
 ```
 PR opened / updated
   ├── ci.yml (workflow-level `paths-ignore: ['**/*.md', 'docs/**']` skips this
   │           entire workflow — every job below, not just individual ones —
-  │           for a PR touching only Markdown/docs paths; "(always)" below
-  │           means "whenever this workflow runs at all")
-  │     ├── clippy             — workspace clippy, 2-pass (always)
+  │           for a PR touching only Markdown/docs paths)
+  │     ├── clippy             — workspace clippy, 2-pass (rust or ci filter, not unconditional
+  │     │                         — see note above)
   │     ├── test                — unit + in-process integration tests only, NOT fmt/clippy
   │     │                         (those are the dedicated `clippy` job above and the separate
-  │     │                         `fmt.yml` workflow below; Ubuntu, macOS, Windows; always)
-  │     ├── integration         — DB/Docker integration tests (Ubuntu; always)
+  │     │                         `fmt.yml` workflow below; Ubuntu, macOS, Windows; rust or ci)
+  │     ├── integration         — DB/Docker integration tests (Ubuntu; rust or ci)
   │     ├── test-fips           — FIPS build/test, 3 OSes (only when `libs/toolkit/**`,
   │     │                         `libs/toolkit-http/**`, or `libs/rustls-*/**` changed)
   │     ├── test-graph-storage  — graph-storage gear's own suite (only when
@@ -484,15 +494,24 @@ PR opened / updated
   │     ├── test-magika         — magika feature lane (only when `gears/file-parser/**` changed)
   │     ├── security            — `make deny` (only when `**/Cargo.toml`, `Cargo.lock`,
   │     │                         or `deny.toml` changed)
-  │     ├── coverage            — cargo-llvm-cov → Codecov upload (always; advisory)
-  │     └── lint                — custom architectural lints (`cargo gears lint`; always)
+  │     ├── coverage            — cargo-llvm-cov → Codecov upload (rust or ci; advisory)
+  │     ├── lint                — custom architectural lints (`cargo gears lint`; always — the
+  │     │                         one job above with no `if:` at all, not even rust/ci-gated)
+  │     └── cfs                 — unconditional `uses: ./.github/workflows/cfs.yml` reusable-
+  │                               workflow call; see `cfs.yml` below for what this actually runs
+  │                               and its own, *separate* independent trigger
   │
-  ├── cfs.yml              — `make cfs-validate` + `cfs-validate-kits` (own workflow, NOT a job
-  │                          inside ci.yml, so ci.yml's doc-paths-ignore above does not apply to
-  │                          it); its own trigger is `**/*.md`, `docs/**`, `gears/**/{docs,src,
-  │                          tests}/**`, `.cf-studio/config/**`, `.cf-studio-kit.toml`,
-  │                          `studio-kit-gears/**`, or `Makefile` — notably this explicitly
-  │                          *includes* doc-only paths, the opposite of being skipped for them
+  ├── cfs.yml              — `make cfs-validate` + `cfs-validate-kits`. Runs through two
+  │                          independent paths, not one: the `cfs` job above (inside `ci.yml`,
+  │                          so skipped along with every other job there by `ci.yml`'s own
+  │                          doc-paths-ignore) **and** its own separate `pull_request` trigger
+  │                          on `**/*.md`, `docs/**`, `gears/**/{docs,src,tests}/**`,
+  │                          `.cf-studio/config/**`, `.cf-studio-kit.toml`, `studio-kit-gears/**`,
+  │                          or `Makefile` (which explicitly *includes* doc-only paths). Net
+  │                          effect: a doc-only PR still gets CFS validation (via the second
+  │                          path, since the first is skipped), and an ordinary code-touching PR
+  │                          gets it from *both* paths at once — two separate workflow runs for
+  │                          the same check, not a single gate
   ├── fmt.yml              — dedicated cargo fmt validation for Rust changes
   ├── api_contracts.yml    — OpenAPI spec freshness (`make openapi`) + oasdiff breaking-change
   │                          gate, on any `**/*.rs`, `**/Cargo.toml`, `Cargo.lock`, `Makefile`,

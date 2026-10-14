@@ -174,7 +174,7 @@ PURPOSE: When a DESIGN this gear already decomposed/implemented downstream is cl
 STATE:
   SET GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM: boolean (default false, scope workflow_run)
 DO:
-  RUN check whether gears/<GEARS_GEAR>/docs/DECOMPOSITION.md exists AND at least one gears/<GEARS_GEAR>/docs/FEATURE*.md has its `featstatus-*-implemented` checkbox checked, and SET GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM accordingly
+  RUN check whether gears/<GEARS_GEAR>/docs/DECOMPOSITION.md exists AND at least one file under gears/<GEARS_GEAR>/docs/features/ (per GEARS_DOC_PATH_RULE for FEATURE, `workflows/doc-feature.md` — not a `FEATURE*.md` glob at the `docs/` level, which no real gear uses) has its `featstatus-*-implemented` checkbox checked, and SET GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM accordingly
   LOAD {workflow_change_impact_analysis}
   RUN ChangeImpactAnalysis with MODE=cascade-tracking, UPSTREAM_ARTIFACT_TYPE=DESIGN, UPSTREAM_ARTIFACT_ID=GEARS_TARGET_PATH, BASELINE_REF=HEAD (the last committed revision of GEARS_TARGET_PATH, i.e. before this close's own uncommitted edits), CURRENT_REF=the working tree now, WHEN GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM
   EMIT the resulting report path and its findings summary prominently in this close's own report, labeled "Downstream impact of this DESIGN amendment", naming every affected FEATURE explicitly (not just a count), WHEN GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM
