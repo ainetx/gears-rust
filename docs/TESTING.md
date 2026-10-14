@@ -518,7 +518,17 @@ Nightly / scheduled only
 
 Don't run the whole pipeline locally for every change. Route by what the diff actually
 touches, mirroring `ci.yml`'s own `changes` job (the one source of truth for these
-conditions — if it drifts from this table, trust the workflow file):
+conditions — if it drifts from this table, trust the workflow file).
+
+The `gears` Studio kit's `GearsCodeClose`/`GearsCodeChainSweep` units execute this table's
+logic automatically, but the actual command string each row below runs is not hardcoded in
+this table or in the kit's own prompt files — it's looked up from
+`studio-kit-gears/scripts/ci-commands.toml` (`{ci_commands}`), a small, user-editable
+facade that exists specifically so a standalone install of this kit, into a project whose
+build system doesn't match this repo's own Makefile, can repoint every command below
+without touching any kit logic. The commands shown in this table are this repository's own
+current defaults in that file, kept here for human readability — if they ever drift from
+`ci-commands.toml`, trust that file.
 
 | Changed | Run locally | Matches CI job |
 |---|---|---|
