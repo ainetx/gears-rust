@@ -13,6 +13,16 @@ required or optional), `GEARS_DOC_NEXT_SKILL`, `GEARS_DOC_PATH_RULE`,
 `GEARS_DOC_EXAMPLE`, and optionally `GEARS_DOC_COMPANION` (a section of one
 other artifact the author stage must update in the same change).
 
+One DESIGN-only addition to the otherwise kind-agnostic close stage:
+`GearsDocDesignAmendImpactCheck` runs `cf-gears-change-impact-analysis`
+automatically whenever a DESIGN with an already-decomposed/already-implemented
+downstream (a DECOMPOSITION plus at least one closed FEATURE) closes again, so
+a mid-chain DESIGN amendment surfaces its downstream impact right away — non-
+blockingly, same as every other use of that workflow — instead of only at
+`GearsCodeChainSweep`'s end-of-chain re-check (`modules/code-stage-router.md`),
+which remains the actual blocking backstop for whatever this earlier, advisory
+signal was missed or ignored.
+
 ```pdsl
 UNIT GearsDocStageEntry
 PURPOSE: Resolve the stage and target of this gears document run, then route it.
@@ -159,9 +169,28 @@ RULES:
 ```
 
 ```pdsl
+UNIT GearsDocDesignAmendImpactCheck
+PURPOSE: When a DESIGN this gear already decomposed/implemented downstream is closing again (an amendment, not its first authoring), surface its downstream impact immediately instead of only at GearsCodeChainSweep's end-of-chain re-check.
+STATE:
+  SET GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM: boolean (default false, scope workflow_run)
+DO:
+  RUN check whether gears/<GEARS_GEAR>/docs/DECOMPOSITION.md exists AND at least one gears/<GEARS_GEAR>/docs/FEATURE*.md has its `featstatus-*-implemented` checkbox checked, and SET GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM accordingly
+  LOAD {workflow_change_impact_analysis}
+  RUN ChangeImpactAnalysis with MODE=cascade-tracking, UPSTREAM_ARTIFACT_TYPE=DESIGN, UPSTREAM_ARTIFACT_ID=GEARS_TARGET_PATH, BASELINE_REF=HEAD (the last committed revision of GEARS_TARGET_PATH, i.e. before this close's own uncommitted edits), CURRENT_REF=the working tree now, WHEN GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM
+  EMIT the resulting report path and its findings summary prominently in this close's own report, labeled "Downstream impact of this DESIGN amendment", naming every affected FEATURE explicitly (not just a count), WHEN GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM
+RULES:
+  ALWAYS run this only WHEN GEARS_DOC_KIND == DESIGN; every other artifact kind skips this unit entirely
+  NEVER run ChangeImpactAnalysis here when GEARS_DESIGN_HAS_REALIZED_DOWNSTREAM is false — a DESIGN with no DECOMPOSITION/closed FEATURE yet has nothing downstream to impact
+  NEVER block this DESIGN's own close on the impact-analysis result — ChangeImpactAnalysis's own contract is advisory-only ("NEVER block a merge from this workflow"), and this check inherits that; a downstream-impact finding is a strongly-surfaced recommendation, never an added DOD gate
+  ALWAYS run this before GearsDocClose's own DOD check so its findings land in the same close report, not a separate one
+  ALWAYS keep every affected FEATURE named in this unit's EMIT part of "current context" for GearsDocClose's own NextActionsOffer call, so re-validating that FEATURE is naturally synthesized as one of its 3-5 candidate actions — never invent a separate next-action field; NextActionsOffer has exactly one pinned slot and synthesizes the rest from context
+```
+
+```pdsl
 UNIT GearsDocClose
 PURPOSE: Check the definition of done, report, and offer the next artifact of the chain.
 DO:
+  RUN GearsDocDesignAmendImpactCheck WHEN GEARS_DOC_KIND == DESIGN
   RUN `cfs validate-toc <GEARS_TARGET_PATH>` and `cfs validate --artifact <GEARS_TARGET_PATH>` and keep the result as ci-findings
   LOAD {cf-studio-path}/.core/skills/studio/modules/runtime/artifact-dod-check.md
   SET DOD_INPUT_ITEMS = the items of "{gears_doc_phase}#definition-of-done", each normalized to item_id, summary, and required; for the upstream-ID-coverage item, set its coverage_hints to the cross-reference/coverage findings in the ci-findings result above (`cfs validate --artifact` already checks `covered_by` completeness and that every ID reference resolves), so a genuinely-covered artifact has something to match against instead of being marked unclear for lack of a hint
