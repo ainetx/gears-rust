@@ -14,11 +14,10 @@ ALWAYS open and follow `{cf-studio-path}/.core/skills/studio/SKILL.md` FIRST.
 LOAD `{skill_toolkit_pr_review}` and FOLLOW all of its instructions, passing through
 whatever parameters were given to this workflow.
 
-This kit's `generate-agents` renames the skill's 7 sub-agents with a `cf-gears-` prefix
-(`cf-gears-toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}`),
-not the bare names the skill's own text uses to dispatch them
-(`toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}`). Dispatch by
-whichever identity actually exists in this session, preferring the renamed one.
+This kit's `generate-agents` renames every one of the skill's sub-agents with a `cf-gears-`
+prefix (e.g. `toolkit-pr-review-security` becomes `cf-gears-toolkit-pr-review-security`), not
+the bare name the skill's own text uses to dispatch it. Dispatch by whichever identity
+actually exists in this session, preferring the renamed one.
 
 The skill's own text also cites `docs/toolkit-pr-review/...` and
 `tools/scripts/toolkit-pr-review/...` as plain, project-root-relative paths — correct when
@@ -33,11 +32,11 @@ differs. When `{toolkit_pr_review_docs}`/`{toolkit_pr_review_scripts}` resolve t
 same literal `docs/toolkit-pr-review`/`tools/scripts/toolkit-pr-review` the skill's text
 already assumes (the in-repo case), this is a no-op.
 
-Each of the 7 sub-agents' own files also hardcodes its rule-module and companion-agent path
-as a literal `docs/toolkit-pr-review/...` string — wrong after a standalone copy-mode
-install, and a sub-agent dispatch never inherits this session's own path resolution above.
-Every time you dispatch one of them, append this line to its dispatch prompt, filled in with
-the real resolved path: "Your own file names `docs/toolkit-pr-review/rules/<name>.md` and
+Each sub-agent's own file also hardcodes its rule-module and companion-agent path as a
+literal `docs/toolkit-pr-review/...` string — wrong after a standalone copy-mode install,
+and a sub-agent dispatch never inherits this session's own path resolution above. Every time
+you dispatch any sub-agent, append this line to its dispatch prompt, filled in with the real
+resolved path: "Your own file names `docs/toolkit-pr-review/rules/<name>.md` and
 `docs/toolkit-pr-review/agents/subject.md` — actually read them at `<resolved
 {toolkit_pr_review_docs}>/rules/<name>.md` and `<resolved {toolkit_pr_review_docs}>/agents/
 subject.md` instead."
