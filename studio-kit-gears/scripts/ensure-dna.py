@@ -93,26 +93,51 @@ def main():
         return 0
 
     if _is_dna_submodule_checkout(root):
-        print(
-            f"{canary} is missing but guidelines/DNA is a registered submodule here; "
-            "initializing it now..."
-        )
-        # --force: the submodule may already be checked out at the right commit
-        # with just one file locally deleted/modified (not "never fetched" at
-        # all) — a plain `update --init` is then a no-op against that file and
-        # this would falsely report failure.
-        result = subprocess.run(
-            ["git", "submodule", "update", "--init", "--recursive", "--force", "--", "guidelines/DNA"],
-            cwd=root,
-        )
-        # Re-resolve: initializing the submodule doesn't move it, but a `cfs`-less
-        # best-effort guess may have been wrong before the submodule existed at all.
+        submodule_root = os.path.join(root, "guidelines", "DNA")
+        submodule_git_marker = os.path.join(submodule_root, ".git")
+        if not os.path.exists(submodule_git_marker):
+            # Genuinely never fetched here — nothing local to lose, so a plain
+            # (non-force) init is the right and sufficient tool.
+            print(
+                f"{canary} is missing and guidelines/DNA has never been fetched "
+                "here; initializing it now..."
+            )
+            result = subprocess.run(
+                ["git", "submodule", "update", "--init", "--recursive", "--", "guidelines/DNA"],
+                cwd=root,
+            )
+        else:
+            # The submodule is already checked out — only the canary file
+            # itself is missing/modified. Restore just that one file from the
+            # submodule's own recorded commit. Deliberately never `--force`
+            # the whole submodule here: that discards every local change
+            # anywhere inside guidelines/DNA, not just this one file, with no
+            # confirmation and no backup.
+            relative_canary = os.path.relpath(canary, submodule_root)
+            if relative_canary.startswith(".."):
+                print(
+                    f"ERROR: {canary} does not resolve under {submodule_root}; "
+                    "cannot target a single-file restore.",
+                    file=sys.stderr,
+                )
+                return 1
+            print(
+                f"{canary} is missing but guidelines/DNA is already checked out "
+                f"here; restoring just {relative_canary} from its recorded "
+                "commit (leaving any other local changes in guidelines/DNA untouched)..."
+            )
+            result = subprocess.run(
+                ["git", "checkout", "HEAD", "--", relative_canary],
+                cwd=submodule_root,
+            )
+        # Re-resolve: a `cfs`-less best-effort guess may have been wrong before
+        # the submodule existed at all.
         canary = _resolve_dna_rust_path() or canary
         if result.returncode == 0 and os.path.isfile(canary) and os.path.getsize(canary) > 0:
             print(f"OK: {canary} fetched")
             return 0
         print(
-            "ERROR: could not initialize the guidelines/DNA submodule automatically.\n"
+            "ERROR: could not restore guidelines/DNA automatically.\n"
             "Run this manually, then retry:\n"
             "  git submodule update --init --recursive -- guidelines/DNA",
             file=sys.stderr,
