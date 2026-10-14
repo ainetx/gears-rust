@@ -388,6 +388,15 @@ user_modifiable = true
 public = true
 
 [[kits.resources]]
+id = "workflow_init"
+kind = "skill"
+source = "studio-kit-gears/workflows/init.md"
+install_path = "workflows/init.md"
+type = "file"
+user_modifiable = true
+public = true
+
+[[kits.resources]]
 id = "scripts"
 kind = "script"
 source = "studio-kit-gears/scripts"
@@ -408,6 +417,14 @@ id = "ci_commands"
 kind = "script"
 source = "studio-kit-gears/scripts/ci-commands.toml"
 install_path = "scripts/ci-commands.toml"
+type = "file"
+user_modifiable = true
+
+[[kits.resources]]
+id = "project_paths"
+kind = "script"
+source = "studio-kit-gears/scripts/project-paths.toml"
+install_path = "scripts/project-paths.toml"
 type = "file"
 user_modifiable = true
 

@@ -70,6 +70,7 @@ PURPOSE: Hand the stage to the Studio coding skill that owns it.
 DO:
   RUN GearsCodeSupplyPhaseArtifacts WHEN GEARS_STAGE == tests OR GEARS_STAGE == author
   RUN GearsCodeDispatchContext WHEN GEARS_STAGE != close
+  RUN GearsCiFacadeSanityCheck WHEN GEARS_STAGE == validate
   LOAD the Studio workflow coding-tests.md, coding-gen.md, coding-ci.md, coding-review.md, or coding-fix.md from {cf-studio-path}/.core/workflows/ WHEN GEARS_STAGE is tests, author, validate, review, or fix respectively
   RUN GearsCodePinNextStage WHEN GEARS_STAGE != close
   CONTINUE the entry unit of the loaded workflow (CodingTestsPreset, CodingGenBootstrap, CodingCiEntry, CodingReviewEntry, or CodingFixBootstrap) WHEN GEARS_STAGE != close
@@ -87,16 +88,34 @@ PURPOSE: Build the kit context block every sub-agent dispatch of this stage must
 DO:
   SET GEARS_DISPATCH_CONTEXT = "Gears kit context (read-only): implementation rules <GEARS_CODE_RULES>; source contract <GEARS_SOURCE_PATH> (the quoted GEARS_SOURCE_CONTEXT when inline); slice <GEARS_SLICE>; gear gears/<GEARS_GEAR>/" WHEN GEARS_STAGE != review
   SET GEARS_DISPATCH_CONTEXT = "Gears kit review methodology (apply in addition to the Studio methodologies, and cite its item IDs in findings): <GEARS_CODE_CHECKLIST>; implementation rules <GEARS_CODE_RULES>; source contract <GEARS_SOURCE_PATH> (the quoted GEARS_SOURCE_CONTEXT when inline); slice <GEARS_SLICE>; gear gears/<GEARS_GEAR>/; mode <GEARS_CODE_MODE>" WHEN GEARS_STAGE == review
-  RUN `git status --porcelain -- <GEARS_SOURCE_PATH> gears/<GEARS_GEAR>/ Cargo.toml Cargo.lock apps/cf-gears-example-server/ libs/toolkit/ libs/toolkit-http/ libs/rustls-*/` (the slice, the gear, the registration surface named in {gears_code_phase}, and the FIPS-relevant libs {testing_policy}'s routing table keys on) and SET GEARS_WORKTREE_DIRTY = true when it lists any path, else false
+  LOAD {project_paths}
+  RUN `git status --porcelain -- <GEARS_SOURCE_PATH> gears/<GEARS_GEAR>/ Cargo.toml Cargo.lock <example_server_path from {project_paths}, omitted from the path list entirely when empty> <each glob in {project_paths}'s fips_lib_paths, omitted entirely when the list is empty>` (the slice, the gear, the registration surface, and the FIPS-relevant libs {testing_policy}'s routing table keys on — both path facts sourced from {project_paths}, never hardcoded here) and SET GEARS_WORKTREE_DIRTY = true when it lists any path, else false
   SET GEARS_DEPS_CHANGED = true WHEN that status output lists `Cargo.toml` or `Cargo.lock`, else false
   SET GEARS_REST_CHANGED = true WHEN that status output lists a path under `gears/<GEARS_GEAR>/**/api/rest/` or `gears/<GEARS_GEAR>/**/src/api/`, else false — a narrower proxy for {testing_policy}'s broader "any `.rs` file when the gear exposes REST" condition, by design (see that table's own note)
   SET GEARS_GTS_TOUCHED = true WHEN the slice touches GTS identifiers, type schemas, well-known instances, discriminator/const-enum-like values, or `x-gts-traits`/`x-gts-traits-schema` (the same condition the `{guidelines_gts}` review bullet already names), else false
-  SET GEARS_LIBS_FIPS_TOUCHED = true WHEN that status output lists a path under `libs/toolkit/`, `libs/toolkit-http/`, or `libs/rustls-*/`, else false
+  SET GEARS_LIBS_FIPS_TOUCHED = true WHEN {project_paths}'s fips_lib_paths is non-empty AND that status output lists a path under any of its globs, else false — always false when fips_lib_paths is an empty list, never an error
 RULES:
   ALWAYS paste GEARS_DISPATCH_CONTEXT verbatim into the prompt of every sub-agent this stage dispatches (author, coder, test writer, reviewer, bug finder, fixer)
   NEVER dispatch a sub-agent in this stage without GEARS_DISPATCH_CONTEXT
   ALWAYS dispatch a main-context coder (cf-generate-coder-smart, or cf-generate-coder-casual for small slices) instead of the worktree-isolated cf-codegen WHEN GEARS_WORKTREE_DIRTY == true, because an isolated worktree only sees committed files
   ALWAYS derive GEARS_DEPS_CHANGED, GEARS_REST_CHANGED, GEARS_GTS_TOUCHED, and GEARS_LIBS_FIPS_TOUCHED from the same git status call as GEARS_WORKTREE_DIRTY, never a second scan
+  ALWAYS read example_server_path and fips_lib_paths from {project_paths}, never hardcode a literal path here — a standalone install repoints these without editing this file
+```
+
+```pdsl
+UNIT GearsCiFacadeSanityCheck
+PURPOSE: Catch a never-configured {ci_commands}/{project_paths} before a gate command fails confusingly, and recommend cf-gears-init instead of treating it as a code defect.
+STATE:
+  SET GEARS_CI_FACADE_HEALTHY: true | false | unset (default unset, scope workflow_run)
+DO:
+  SKIP the rest of this unit WHEN GEARS_CI_FACADE_HEALTHY is already set for this workflow_run — check once per run, not once per slice or stage
+  LOAD {ci_commands} and {project_paths}
+  SET GEARS_CI_FACADE_HEALTHY = false WHEN either file is missing entirely, OR every operation/entry in both files together is mapped to an empty string/list (a facade blanked out everywhere, not selectively trimmed, reads as "never configured" rather than "deliberately disabled"), OR `gear_ci`/`dylint`/`full_check` are still their exact shipped gears-rust defaults (literal `make ...` invocations) AND this project has no `Makefile` at its root defining those same targets — else true
+  EMIT, WHEN GEARS_CI_FACADE_HEALTHY == false, "This project's CI/build facades ({ci_commands}, {project_paths}) look unconfigured for this project — missing, fully blanked, or still pointing at constructorfabric/gears-rust's own Makefile targets and paths in a project that has neither. The gate commands below will likely fail with a 'command not found' error, not a real code defect. Recommend running `cf-gears-init` first." then CONTINUE anyway — never block or skip the actual gate on this alone, since a false positive here must not stop real work
+RULES:
+  ALWAYS run this at most once per workflow_run
+  NEVER treat a selectively-emptied facade (some operations/entries blank, most populated) as unhealthy — {ci_commands}/{project_paths}'s own documented convention is that an empty entry is a deliberate, supported "no equivalent here," not a sign of neglect
+  ALWAYS recommend `cf-gears-init` by name rather than describing the problem without a next action
 ```
 
 ```pdsl
@@ -131,6 +150,7 @@ UNIT GearsCodeClose
 PURPOSE: Check the definition of done for the slice, report, and offer the next slice.
 DO:
   RUN GearsCodeDispatchContext — close is the one stage GearsCodeStageRoute skips it for (it dispatches no creative sub-agent), but GEARS_DEPS_CHANGED/GEARS_REST_CHANGED/GEARS_GTS_TOUCHED/GEARS_LIBS_FIPS_TOUCHED are set only inside that unit, and the next line needs them; without this explicit call they would be read here in their unset default state every time
+  RUN GearsCiFacadeSanityCheck — close also runs gear_ci/dylint/full_check directly, independent of whether this run passed through a validate stage that would otherwise have triggered this check
   RUN {ci_commands}'s `gear_ci` and `dylint` commands (substituting GEARS_GEAR for `<GEAR>`; skip either that's mapped to an empty string) plus `cfs validate` when GEARS_CODE_MODE == feature-led, and keep the result as ci-findings
   LOAD {testing_policy} and {ci_commands}, and RUN every additional local check {testing_policy}'s routing table maps to GEARS_DEPS_CHANGED, GEARS_REST_CHANGED, GEARS_GTS_TOUCHED, GEARS_LIBS_FIPS_TOUCHED, and GEARS_GEAR for this slice — using each condition's command string from {ci_commands}, never a literal command written here — folding each result into ci-findings — these catch what `gear_ci`/`dylint` alone do not and that CI gates on separately; {testing_policy} is the single source of truth for which condition maps to which named operation, {ci_commands} is the single source of truth for what that operation actually runs, neither is duplicated here
   LOAD {cf-studio-path}/.core/skills/studio/modules/runtime/artifact-dod-check.md
