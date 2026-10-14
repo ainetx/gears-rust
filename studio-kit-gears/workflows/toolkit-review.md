@@ -36,9 +36,8 @@ already assumes (the in-repo case), this is a no-op.
 Each of the 7 sub-agents' own files also hardcodes its rule-module and companion-agent path
 as a literal `docs/toolkit-pr-review/...` string — wrong after a standalone copy-mode
 install, and a sub-agent dispatch never inherits this session's own path resolution above.
-Never edit the 7 sub-agent files to fix this. Instead, every time you dispatch one of them,
-append this line to its dispatch prompt, filled in with the real resolved path: "Your own
-file names `docs/toolkit-pr-review/rules/<name>.md` and
+Every time you dispatch one of them, append this line to its dispatch prompt, filled in with
+the real resolved path: "Your own file names `docs/toolkit-pr-review/rules/<name>.md` and
 `docs/toolkit-pr-review/agents/subject.md` — actually read them at `<resolved
 {toolkit_pr_review_docs}>/rules/<name>.md` and `<resolved {toolkit_pr_review_docs}>/agents/
 subject.md` instead."
