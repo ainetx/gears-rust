@@ -13,3 +13,7 @@ ALWAYS open and follow `{cf-studio-path}/.core/skills/studio/SKILL.md` FIRST.
 
 LOAD `{skill_gear_creator}` and FOLLOW all of its instructions, passing through whatever
 parameters were given to this workflow.
+
+That skill's own text names this repo's own reference gear and lint tool directly; prefer
+`{project_paths}`'s `reference_gear_path` and `{ci_commands}`'s `dylint` entry instead when
+either is empty or doesn't match what this project actually has.

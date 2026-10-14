@@ -97,6 +97,7 @@ relies entirely on the bundled copy from install time.
 | `cf-gears-change-impact-analysis` | `{workflow_change_impact_analysis}` | read-only downstream impact report for an upstream artifact change |
 | `cf-gears-pr-review` | `{workflow_pr_review}` | SDLC-traceability + guardrail PR review (delegates to `cf-gears-toolkit-review` for its Rust/ToolKit pass) |
 | `cf-gears-pr-status` | `{workflow_pr_status}` | PR status report |
+| `cf-gears-init` | `{workflow_init}` | one-time (or re-run-as-needed) setup: discovers this project's real build/test commands and key paths, writes them into `{ci_commands}`/`{project_paths}` |
 | `cf-gears-toolkit-review` | `{workflow_toolkit_review}` | idiomatic-Rust / ToolKit-framework conformance review (PR or local branch), standalone or via `cf-gears-pr-review`; thin wrapper over the `toolkit-pr-review` skill |
 
 ## Other kit resources
@@ -109,7 +110,8 @@ PR tooling, not tied to one artifact kind:
 | `{pr_status_report_template}` | `artifacts/PR-STATUS-REPORT-TEMPLATE/template.md` | `cf-gears-pr-status` output format |
 | `{scripts}` | `scripts/` (directory) | `python3 {scripts}/pr.py`, `{scripts}/prompts/pr/*` |
 | `{change_impact_config}` | `scripts/change-impact-analysis.toml` | `cf-gears-change-impact-analysis` thresholds |
-| `{ci_commands}` | `scripts/ci-commands.toml` | `GearsCodeClose`/`GearsCodeChainSweep`'s CI/build command facade — edit this file (not `code-stage-router.md` or `docs/TESTING.md`) to repoint every gate command for a project whose build system doesn't match this repo's own Makefile |
+| `{ci_commands}` | `scripts/ci-commands.toml` | `GearsCodeClose`/`GearsCodeChainSweep`'s CI/build command facade — edit this file (not `code-stage-router.md` or `docs/TESTING.md`) to repoint every gate command for a project whose build system doesn't match this repo's own Makefile; `cf-gears-init` does this for you |
+| `{project_paths}` | `scripts/project-paths.toml` | `GearsCodeDispatchContext`/`codebase/rules.md`'s path facade — the canonical reference gear, the example-server registration surface, and the FIPS-relevant lib paths, for a project whose layout doesn't match this repo's own; `cf-gears-init` does this for you |
 | `{skill_toolkit_pr_review}` | `.claude/skills/toolkit-pr-review/` (directory) | bundles the real `toolkit-pr-review` skill (its `SKILL.md` and any future sibling files) for standalone installs; this is exactly what `cf-gears-toolkit-review`'s single `LOAD .../FOLLOW` instruction resolves to |
 | `{skill_gear_creator}` | `.claude/skills/gear-creator/` (directory) | bundles the real `gear-creator` skill (its `SKILL.md` and any future sibling files) for standalone installs; this is exactly what `cf-gears-gear-creator`'s single `LOAD .../FOLLOW` instruction resolves to |
 | `{agent_toolkit_pr_review_architecture}` … `{agent_toolkit_pr_review_toolkit}` (7 resources) | `.claude/agents/toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}.md` | the real definitions `toolkit-pr-review`'s 7 sub-agents dispatch to — bundled since a standalone install's own agent-discovery may not see them |
