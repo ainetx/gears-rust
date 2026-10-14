@@ -72,8 +72,8 @@ relies entirely on the bundled copy from install time.
 | `{ensure_dna_script}` | `scripts/ensure-dna.py` | CODE rules (prerequisite) | Authoring |
 | `{testing_policy}` | `docs/TESTING.md` | CODE, DESIGN rules | Authoring |
 | `{fips_requirements}` | `docs/security/fips/` | CODE rules/checklist, DESIGN, PRD rules (FIPS-touching work only) | Both |
-| `{guidelines_gts}` | `guidelines/GTS.md` | CODE, DESIGN checklist/rules | Review |
-| `{toolkit_pr_review_docs}` | `docs/toolkit-pr-review/` | CODE checklist; `workflows/toolkit-review.md` (fallback for the `toolkit-pr-review` skill) | Review |
+| `{guidelines_gts}` | `guidelines/GTS.md` | CODE, DESIGN checklist (review-only; not loaded at authoring) | Review |
+| `{toolkit_pr_review_docs}` | `docs/toolkit-pr-review/` | CODE checklist | Review |
 | `{architecture_manifest}` | `docs/ARCHITECTURE_MANIFEST.md` | PRD rules/checklist/template, DESIGN checklist, `artifacts/ISO_29148.md` | Both |
 | `{iso_29148}` | `artifacts/ISO_29148.md` | PRD, UPSTREAM_REQS rules | Authoring |
 | `{guidelines_readme}` | `guidelines/README.md` | PRD rules (Operational Concept, NFR sections) — indexes the other `guidelines/*` variables | Authoring |
@@ -124,6 +124,8 @@ Shared chain infrastructure:
 | `{gears_doc_phase}` | `plans/doc-phase.md` | phase-plan/phase-dod for doc presets, no separate planning session needed |
 | `{gears_code_phase}` | `plans/code-phase.md` | same, for code presets |
 
-60 kit-scoped variables in total (plus 5 Studio-system ones — `{cf-studio-path}`,
-`{project_root}`, `{repo}`, `{base_dir}`, `{master_repo}` — that are not kit resources).
+60 kit-scoped variables in total (plus 6 Studio-system ones — `{cf-studio-path}`,
+`{project_root}`, `{repo}`, `{base_dir}`, `{master_repo}`, `{cfs_cmd}` — that are not
+kit resources; `{cfs_cmd}` resolves to the Studio CLI invocation via the root router's
+own `CommandResolution`, same as every `{cfs_cmd} ...` command used throughout this doc).
 Run `{cfs_cmd} resolve-vars --kit gears --flat` for the live, authoritative list.

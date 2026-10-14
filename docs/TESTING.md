@@ -458,7 +458,10 @@ table below mirrors it, don't let this doc drift from `.github/workflows/*.yml` 
 
 ```
 PR opened / updated
-  ├── ci.yml
+  ├── ci.yml (workflow-level `paths-ignore: ['**/*.md', 'docs/**']` skips this
+  │           entire workflow — every job below, not just individual ones —
+  │           for a PR touching only Markdown/docs paths; "(always)" below
+  │           means "whenever this workflow runs at all")
   │     ├── clippy             — workspace clippy, 2-pass (always)
   │     ├── test                — fmt + clippy + unit tests (Ubuntu, macOS, Windows; always)
   │     ├── integration         — DB/Docker integration tests (Ubuntu; always)
@@ -490,10 +493,11 @@ PR opened / updated
   ├── forbidden-words.yml  — disallowed-term scan
   ├── dco-signoff.yml      — DCO sign-off presence check
   ├── helm.yml             — Helm chart lint/template, Helm-path changes only
-  └── e2e.yml (PRs to main only)
+  └── e2e.yml (PRs to main only; its own `paths-ignore: ['**/*.md', 'docs/**',
+  │            'guidelines/**']` skips it entirely for a PR touching only those paths)
         └── e2e           — full E2E suite (local mode), plus mini-chat, TR/AuthZ
-                            and usage-collector E2E lanes — runs on every PR to main
-                            regardless of what the diff touches
+                            and usage-collector E2E lanes — runs on every other PR to
+                            main regardless of what the rest of the diff touches
 
 Additional quality / automation workflows (not per-PR correctness gates for ordinary
 CODE changes): codeql.yml (security/quality scanning), pr-governance.yml and
@@ -524,7 +528,7 @@ conditions — if it drifts from this table, trust the workflow file):
 | GTS identifiers, type schemas, well-known instances, or `x-gts-traits` touched in code (even without touching a `.md`/`.json`/`.yaml`/`.yml` file) | `make gts-docs` | `gts-validation.yml` only triggers on doc/schema file paths, not on `.rs` changes alone — running this locally for GTS-touching code changes is **stricter** than what CI gates on today |
 | `libs/toolkit/**`, `libs/toolkit-http/**`, or `libs/rustls-*/**` | `make test-fips` | `ci.yml` / `test-fips` |
 | `gears/graph-storage/**` (excluding the onnx/sdk-only lane below) | `make test-graph-storage` | `ci.yml` / `test-graph-storage` (the PostgreSQL lane, `test-graph-storage-pg`, needs a pinned Postgres+pgvector image and isn't part of this quick local check) |
-| `gears/graph-storage/{onnx-embedding-plugin,graph-storage-sdk}/**` | `cargo test -p cf-gears-graph-storage-onnx-embedding-plugin` (no Makefile wrapper yet) | `ci.yml` / `test-onnx-embedding` |
+| `gears/graph-storage/{onnx-embedding-plugin,graph-storage-sdk,graph-storage}/**` (CI's filter includes the bare core crate too, to catch its `#[cfg(feature = "onnx")]` wiring breaking) | `cargo test -p cf-gears-graph-storage-onnx-embedding-plugin` (no Makefile wrapper yet); additionally `cargo check -p cf-gears-graph-storage --features onnx` for a core-crate-only change — cheap, no external downloads, and the one check that actually covers that path | `ci.yml` / `test-onnx-embedding` (its other two steps need a downloaded ONNX runtime + model/tokenizer and aren't part of this quick local check) |
 | `gears/file-parser/**` | `cargo test -p cf-gears-file-parser --features magika` (no Makefile wrapper yet) | `ci.yml` / `test-magika` |
 
 None of these replace `make gear-ci GEAR=<gear>` + `make dylint` (always required) — they're
