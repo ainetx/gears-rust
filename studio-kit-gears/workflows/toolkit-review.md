@@ -33,17 +33,12 @@ differs. When `{toolkit_pr_review_docs}`/`{toolkit_pr_review_scripts}` resolve t
 same literal `docs/toolkit-pr-review`/`tools/scripts/toolkit-pr-review` the skill's text
 already assumes (the in-repo case), this is a no-op.
 
-This resolution happens in this session, not inside the 7 sub-agents the skill's own text
-dispatches by name — each of those runs as its own separate agent context, seeing only its
-own bundled file's content (which still hardcodes the literal, project-root-relative paths)
-plus whatever prompt this session gives it at dispatch time; it never inherits what this
-session itself resolved. So when the skill's instructions direct dispatching any of the 7
-`(cf-gears-)toolkit-pr-review-{architecture,async,design,errors,security,tests,toolkit}`
-sub-agents, prepend the already-resolved real paths to that sub-agent's own dispatch prompt
-explicitly — e.g. "Your own file cites `docs/toolkit-pr-review/rules/<name>.md` and
-`docs/toolkit-pr-review/agents/subject.md`; in this session those actually resolve to
-`<resolved {toolkit_pr_review_docs}>/rules/<name>.md` and
-`<resolved {toolkit_pr_review_docs}>/agents/subject.md` — read them there instead of the
-literal path your own file gives." Never edit the 7 sub-agent files themselves to carry this
-resolution; the correction belongs in what this session passes them at dispatch time, same
-as the sub-agent identity remapping above.
+Each of the 7 sub-agents' own files also hardcodes its rule-module and companion-agent path
+as a literal `docs/toolkit-pr-review/...` string — wrong after a standalone copy-mode
+install, and a sub-agent dispatch never inherits this session's own path resolution above.
+Never edit the 7 sub-agent files to fix this. Instead, every time you dispatch one of them,
+append this line to its dispatch prompt, filled in with the real resolved path: "Your own
+file names `docs/toolkit-pr-review/rules/<name>.md` and
+`docs/toolkit-pr-review/agents/subject.md` — actually read them at `<resolved
+{toolkit_pr_review_docs}>/rules/<name>.md` and `<resolved {toolkit_pr_review_docs}>/agents/
+subject.md` instead."
