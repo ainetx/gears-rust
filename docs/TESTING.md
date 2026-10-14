@@ -456,6 +456,14 @@ Gear runtime settings are YAML-driven under `gears:<gear_name>:` with a `config`
 `dorny/paths-filter`) — this is the authoritative source for what triggers what; the
 table below mirrors it, don't let this doc drift from `.github/workflows/*.yml` again.
 
+Every "(only when X changed)" job below (`test-fips`, `test-graph-storage`,
+`test-onnx-embedding`, `test-magika`, `security`) **also** runs on two additional,
+component-independent signals it shares with every other such job: any
+`**/Cargo.toml`/`Cargo.lock`/`deny.toml` change (the `deps` filter output) or any
+`.github/workflows/**` change (the `ci` filter output) — plus `workflow_dispatch` and a
+fail-open run if the `changes` job itself doesn't succeed. These two are omitted from each
+job's own parenthetical below to avoid repeating them five times; they apply to all five.
+
 ```
 PR opened / updated
   ├── ci.yml (workflow-level `paths-ignore: ['**/*.md', 'docs/**']` skips this
@@ -463,7 +471,9 @@ PR opened / updated
   │           for a PR touching only Markdown/docs paths; "(always)" below
   │           means "whenever this workflow runs at all")
   │     ├── clippy             — workspace clippy, 2-pass (always)
-  │     ├── test                — fmt + clippy + unit tests (Ubuntu, macOS, Windows; always)
+  │     ├── test                — unit + in-process integration tests only, NOT fmt/clippy
+  │     │                         (those are the dedicated `clippy` job above and the separate
+  │     │                         `fmt.yml` workflow below; Ubuntu, macOS, Windows; always)
   │     ├── integration         — DB/Docker integration tests (Ubuntu; always)
   │     ├── test-fips           — FIPS build/test, 3 OSes (only when `libs/toolkit/**`,
   │     │                         `libs/toolkit-http/**`, or `libs/rustls-*/**` changed)
@@ -475,9 +485,14 @@ PR opened / updated
   │     ├── security            — `make deny` (only when `**/Cargo.toml`, `Cargo.lock`,
   │     │                         or `deny.toml` changed)
   │     ├── coverage            — cargo-llvm-cov → Codecov upload (always; advisory)
-  │     ├── lint                — custom architectural lints (`cargo gears lint`; always)
-  │     └── cfs                 — `make cfs-validate` + `cfs-validate-kits` (always)
+  │     └── lint                — custom architectural lints (`cargo gears lint`; always)
   │
+  ├── cfs.yml              — `make cfs-validate` + `cfs-validate-kits` (own workflow, NOT a job
+  │                          inside ci.yml, so ci.yml's doc-paths-ignore above does not apply to
+  │                          it); its own trigger is `**/*.md`, `docs/**`, `gears/**/{docs,src,
+  │                          tests}/**`, `.cf-studio/config/**`, `.cf-studio-kit.toml`,
+  │                          `studio-kit-gears/**`, or `Makefile` — notably this explicitly
+  │                          *includes* doc-only paths, the opposite of being skipped for them
   ├── fmt.yml              — dedicated cargo fmt validation for Rust changes
   ├── api_contracts.yml    — OpenAPI spec freshness (`make openapi`) + oasdiff breaking-change
   │                          gate, on any `**/*.rs`, `**/Cargo.toml`, `Cargo.lock`, `Makefile`,
@@ -539,7 +554,15 @@ current defaults in that file, kept here for human readability — if they ever 
 | `libs/toolkit/**`, `libs/toolkit-http/**`, or `libs/rustls-*/**` | `make test-fips` | `ci.yml` / `test-fips` |
 | `gears/graph-storage/**` (excluding the onnx/sdk-only lane below) | `make test-graph-storage` | `ci.yml` / `test-graph-storage` (the PostgreSQL lane, `test-graph-storage-pg`, needs a pinned Postgres+pgvector image and isn't part of this quick local check) |
 | `gears/graph-storage/{onnx-embedding-plugin,graph-storage-sdk,graph-storage}/**` (CI's filter includes the bare core crate too, to catch its `#[cfg(feature = "onnx")]` wiring breaking) | `cargo test -p cf-gears-graph-storage-onnx-embedding-plugin` (no Makefile wrapper yet); additionally `cargo check -p cf-gears-graph-storage --features onnx` for a core-crate-only change — cheap, no external downloads, and the one check that actually covers that path | `ci.yml` / `test-onnx-embedding` (its other two steps need a downloaded ONNX runtime + model/tokenizer and aren't part of this quick local check) |
-| `gears/file-parser/**` | `cargo test -p cf-gears-file-parser --features magika` (no Makefile wrapper yet) | `ci.yml` / `test-magika` |
+| `gears/file-parser/**` | Requires `ORT_DYLIB_PATH` pointed at a real ONNX Runtime shared library **before** running — without it, the test hangs forever instead of failing cleanly (`ort`'s own behavior against a missing/incompatible runtime; see `gears/file-parser/docs/ADR/0001-*.md`), so always wrap with a timeout (CI itself backstops with `timeout-minutes: 10`): `ORT_DYLIB_PATH=<path-to-libonnxruntime.{so,dylib}> timeout 600 cargo test -p cf-gears-file-parser --features magika` (no Makefile wrapper yet; CI fetches its own copy of the library — see `ci.yml`'s `test-magika` job for the exact version/fetch steps if you don't already have one installed) | `ci.yml` / `test-magika` |
+| `**/Cargo.toml`, `Cargo.lock`, or any `.github/workflows/**` file | in CI, this re-runs **every** row above (`test-fips`, `test-graph-storage`, `test-onnx-embedding`, `test-magika`, `security`) — not just `make deny`/`make shear` from the first row. Running all of them locally for a lockfile bump or workflow-file edit is the safe match; skipping them is a real local/CI gap, not just belt-and-suspenders | `ci.yml`'s shared `deps`/`ci` filter outputs, which every job above's own `if:` OR's in alongside its own component path |
+
+`GearsCodeChainSweep`'s fuller close-out pass (not an ordinary per-slice check) also always
+runs `make e2e-local GEAR=<gear>` for the gear it's closing, unconditionally — unlike every
+row above, this one has no diff-based trigger condition: `run_e2e.py --gear <gear>` discovers
+every E2E suite whose resolved Cargo features include that gear and no-ops cleanly when none
+do, so there is nothing to route on. Matches `e2e.yml`'s local-mode E2E lane, scoped to one
+gear instead of the full suite.
 
 None of these replace `make gear-ci GEAR=<gear>` + `make dylint` (always required) — they're
 additive, triggered only when their own condition is true.
