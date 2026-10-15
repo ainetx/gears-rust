@@ -121,6 +121,24 @@ def main():
                     file=sys.stderr,
                 )
                 return 1
+            # The worktree copy can be empty/missing while the index still
+            # holds different, staged content (e.g. `git add`ed then the
+            # worktree file got truncated some other way) — `git checkout
+            # HEAD -- <path>` would silently overwrite both, discarding the
+            # staged change. Check for that before restoring, not after.
+            staged_diff = subprocess.run(
+                ["git", "diff", "--cached", "--quiet", "--", relative_canary],
+                cwd=submodule_root,
+            )
+            if staged_diff.returncode != 0:
+                print(
+                    f"ERROR: {relative_canary} has staged changes in the index "
+                    "that differ from HEAD; restoring it now would silently "
+                    "discard them. Resolve manually (`git status`/`git diff "
+                    "--cached` in guidelines/DNA) before re-running.",
+                    file=sys.stderr,
+                )
+                return 1
             print(
                 f"{canary} is missing but guidelines/DNA is already checked out "
                 f"here; restoring just {relative_canary} from its recorded "
