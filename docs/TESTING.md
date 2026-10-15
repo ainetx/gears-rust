@@ -509,14 +509,20 @@ PR opened / updated
   │                          doc-paths-ignore) **and** its own separate `pull_request` trigger
   │                          on `**/*.md`, `docs/**`, `gears/**/{docs,src,tests}/**`,
   │                          `.cf-studio/config/**`, `.cf-studio-kit.toml`, `studio-kit-gears/**`,
-  │                          or `Makefile` (which explicitly *includes* doc-only paths). Net
-  │                          effect: a doc-only PR still gets CFS validation (via the second
-  │                          path, since the first is skipped); a PR touching only `libs/**`,
-  │                          `tools/**`, or `apps/**` (outside the second trigger's own path
-  │                          list) gets it once, from the first path only; a PR that also
-  │                          touches `gears/**/{docs,src,tests}/**` (or any of the second
-  │                          trigger's other paths) gets it from *both* paths at once — two
-  │                          separate workflow runs for the same check, not deduped
+  │                          or `Makefile` (which explicitly *includes* doc-only paths) —
+  │                          **but only for a PR targeting `main`**: cfs.yml's own trigger is
+  │                          `branches: [main]`, narrower than `ci.yml`'s `[main, develop]`.
+  │                          Net effect, for a PR targeting `main`: a doc-only PR still gets CFS
+  │                          validation (via the second path, since the first is skipped); a PR
+  │                          touching only `libs/**`/`tools/**`/`apps/**` (outside the second
+  │                          trigger's own path list) gets it once, from the first path only; a
+  │                          PR that also touches `gears/**/{docs,src,tests}/**` (or any of the
+  │                          second trigger's other paths) gets it from *both* paths at once —
+  │                          two separate workflow runs for the same check, not deduped. For a
+  │                          PR targeting `develop`, only the first path can ever fire (the
+  │                          second never triggers on that base branch at all) — so a doc-only
+  │                          PR to `develop` gets **no** CFS validation from either path, the
+  │                          opposite of the `main` case above
   ├── fmt.yml              — dedicated cargo fmt validation for Rust changes
   ├── api_contracts.yml    — OpenAPI spec freshness (`make openapi`) + oasdiff breaking-change
   │                          gate, on any `**/*.rs`, `**/Cargo.toml`, `Cargo.lock`, `Makefile`,
@@ -576,9 +582,9 @@ current defaults in that file, kept here for human readability — if they ever 
 | Any `.rs` file, when the gear exposes REST endpoints via the example server | `make openapi GEAR=<gear>` | `api_contracts.yml` (CI's own trigger is broader — any `.rs`/Cargo/Makefile change — so this local heuristic is narrower than CI; a change outside REST-facing files can still occasionally need it) |
 | GTS identifiers, type schemas, well-known instances, or `x-gts-traits` touched in code (even without touching a `.md`/`.json`/`.yaml`/`.yml` file) | `make gts-docs` | `gts-validation.yml` only triggers on doc/schema file paths, not on `.rs` changes alone — running this locally for GTS-touching code changes is **stricter** than what CI gates on today |
 | `libs/toolkit/**`, `libs/toolkit-http/**`, or `libs/rustls-*/**` | `make test-fips` | `ci.yml` / `test-fips` |
-| `gears/graph-storage/**` (excluding the onnx/sdk-only lane below) | `make test-graph-storage` | `ci.yml` / `test-graph-storage` (the PostgreSQL lane, `test-graph-storage-pg`, needs a pinned Postgres+pgvector image and isn't part of this quick local check) |
+| `gears/graph-storage/**` | `make test-graph-storage` | `ci.yml` / `test-graph-storage` — its `graph_storage` filter is the unqualified `gears/graph-storage/**` glob, so an onnx-plugin/SDK-only change triggers this job too, not just `test-onnx-embedding` below (the PostgreSQL lane, `test-graph-storage-pg`, needs a pinned Postgres+pgvector image and isn't part of this quick local check) |
 | `gears/graph-storage/{onnx-embedding-plugin,graph-storage-sdk,graph-storage}/**` (CI's filter includes the bare core crate too, to catch its `#[cfg(feature = "onnx")]` wiring breaking) | `cargo test -p cf-gears-graph-storage-onnx-embedding-plugin` (no Makefile wrapper yet); additionally `cargo check -p cf-gears-graph-storage --features onnx` for a core-crate-only change — cheap, no external downloads, and the one check that actually covers that path | `ci.yml` / `test-onnx-embedding` runs a third step this quick local check does not cover — `cargo test -p cf-gears-graph-storage --lib --features onnx gear::`, the gear's own ONNX provider-wiring test — since it needs the downloaded ONNX runtime + model/tokenizer CI provisions; run it too (with `ORT_DYLIB_PATH` set, same as the file-parser row below) for a full local reproduction of this lane |
-| `gears/file-parser/**` | Requires `ORT_DYLIB_PATH` pointed at a real ONNX Runtime shared library **before** running — without it, the test hangs forever instead of failing cleanly (`ort`'s own behavior against a missing/incompatible runtime; see `gears/file-parser/docs/ADR/0001-*.md`), so always wrap with a timeout (CI itself backstops with `timeout-minutes: 10`): `ORT_DYLIB_PATH=<path-to-libonnxruntime.{so,dylib}> timeout 600 cargo test -p cf-gears-file-parser --features magika` (no Makefile wrapper yet; CI fetches its own copy of the library — see `ci.yml`'s `test-magika` job for the exact version/fetch steps if you don't already have one installed) | `ci.yml` / `test-magika` |
+| `gears/file-parser/**` | Requires `ORT_DYLIB_PATH` pointed at a real ONNX Runtime shared library **before** running — without it, the test hangs forever instead of failing cleanly (`ort`'s own behavior against a missing/incompatible runtime; see `gears/file-parser/docs/ADR/0001-*.md`), so always wrap with a timeout (CI itself backstops with `timeout-minutes: 10`): `ORT_DYLIB_PATH=<path-to-libonnxruntime.{so,dylib}> timeout 600 cargo test -p cf-gears-file-parser --features magika` (no Makefile wrapper yet; CI fetches its own copy of the library — see `ci.yml`'s `test-magika` job for the exact version/fetch steps if you don't already have one installed); CI's job also ends with `make deny-magika` (`cargo deny --features magika check`) — run that too, it's cheap and needs no runtime | `ci.yml` / `test-magika` |
 | `**/Cargo.toml`, `Cargo.lock`, or any `.github/workflows/**` file | in CI, this re-runs **every** row above (`test-fips`, `test-graph-storage`, `test-onnx-embedding`, `test-magika`, `security`) — not just `make deny`/`make shear` from the first row. Running all of them locally for a lockfile bump or workflow-file edit is the safe match; skipping them is a real local/CI gap, not just belt-and-suspenders | `ci.yml`'s shared `deps`/`ci` filter outputs, which every job above's own `if:` OR's in alongside its own component path |
 
 `GearsCodeChainSweep`'s fuller close-out pass (not an ordinary per-slice check) also always
