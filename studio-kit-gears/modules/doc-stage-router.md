@@ -62,15 +62,31 @@ RULES:
 ```pdsl
 UNIT GearsDocTargetResolve
 PURPOSE: Resolve the single artifact path this run works on.
+STATE:
+  SET GEARS_CATALOG_MATCH: string | unset (default unset, scope workflow_run)
 DO:
   SET GEARS_TARGET_PATH = the explicit document path in the request WHEN GEARS_TARGET_PATH == unset AND the request names one
   SET GEARS_TARGET_PATH = the path GEARS_DOC_PATH_RULE derives for the gear named in the request WHEN GEARS_TARGET_PATH == unset AND the request names a gear
   SET GEARS_TARGET_PATH = the path GEARS_DOC_PATH_RULE derives for GEARS_GEAR, the gear the previous preset handed off, WHEN GEARS_TARGET_PATH == unset AND GEARS_GEAR is set
-  EMIT "Which gear is this <GEARS_DOC_KIND> for? Reply with the gear name (the directory under gears/) or the document path." WHEN GEARS_TARGET_PATH == unset
+  RUN GearsDocCatalogCheck WHEN GEARS_TARGET_PATH == unset AND (GEARS_DOC_KIND == UPSTREAM_REQS OR GEARS_DOC_KIND == PRD)
+  EMIT "Which gear is this <GEARS_DOC_KIND> for? Reply with the gear name (the directory under gears/) or the document path.", plus ` {gears_md} already catalogs this need as "<GEARS_CATALOG_MATCH's heading>" (<its scenario markers>) — if that's what you mean, reply with a directory name for it (e.g. a kebab-case slug of the heading); otherwise name a different gear.` WHEN GEARS_CATALOG_MATCH is set, WHEN GEARS_TARGET_PATH == unset
   STOP_TURN WHEN GEARS_TARGET_PATH == unset
   SET GEARS_GEAR = the gear directory that contains GEARS_TARGET_PATH
 RULES:
   ALWAYS keep one run bound to one artifact path; multi-artifact work belongs in cf-documenting-planning
+  ALWAYS run GearsDocCatalogCheck for UPSTREAM_REQS/PRD before concluding no gear was named and asking the user to invent one — a wrong "this must be new" assumption here compounds into a duplicate gear existing alongside {gears_md}'s own already-planned entry for the same need (confirmed live: a user asked for "email storage", {gears_md} already has an "Emails Storage" catalog entry, and nothing had consulted it before this point)
+```
+
+```pdsl
+UNIT GearsDocCatalogCheck
+PURPOSE: Before treating an unnamed gear as brand-new, check whether {gears_md}'s own catalog already names this need under a different heading.
+DO:
+  LOAD {gears_md}
+  RUN match the request's own described need against {gears_md}'s catalog entries (section headings and their scenario bullets), by meaning, not literal gear-directory-name substring
+  SET GEARS_CATALOG_MATCH = the matched section's heading plus its implemented/planned (`[x]`/`[ ]`) scenario markers WHEN a plausible match is found, else unset
+RULES:
+  NEVER block or add a turn on its own; this only sets state that GearsDocTargetResolve's existing question incorporates
+  NEVER treat an unrelated or weakly-related catalog section as a match; a false "this already exists" suggestion is its own kind of harm — leave GEARS_CATALOG_MATCH unset when genuinely unsure
 ```
 
 ```pdsl
