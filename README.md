@@ -48,6 +48,11 @@ See also [REPO_PLAYBOOK](docs/REPO_PLAYBOOK.md) with the registry of repository-
 
 See [SETUP.md](SETUP.md) for clean-install and run instructions for macOS, Linux, and Windows. It covers Rust and Cargo through rustup, native build prerequisites, `make setup`, and optional Constructor Studio installation.
 
+Run `git submodule update --init --recursive` (or `make ensure-submodules` to just check)
+right after cloning, before using Constructor Studio (`cfs init`, `cfs generate-agents`,
+etc.) — it loads every kit's resources eagerly, including `guidelines/DNA`, and fails with a
+wall of "source path ... does not exist" errors if that submodule isn't fetched yet.
+
 A MariaDB, PostgreSQL, SQLite, or in-memory database is required for the corresponding runtime configuration.
 
 ### CI/Development Commands
