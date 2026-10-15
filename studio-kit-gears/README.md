@@ -58,6 +58,19 @@ kit installed outside the `gears-rust` checkout gets its own bundled copy, and
 hasn't fetched it yet; a standalone install has no submodule to init at all and instead
 relies entirely on the bundled copy from install time.
 
+**This matters before `{ensure_dna_script}` ever gets a chance to run, too**: `cfs`'s own
+kit-model loader validates every registered resource's `source` path eagerly, with no
+lazy/optional mode, so `cfs init`/`cfs generate-agents`/`cfs kit validate` on a `gears-rust`
+checkout whose `guidelines/DNA` submodule hasn't been fetched yet fails outright with
+`Resource 'dna_rust': source path 'guidelines/DNA/languages/RUST.md' does not exist`
+(repeated once per agent `cfs generate-agents` inspects) — this is `cfs`'s own validation
+behavior, not something a kit manifest can opt out of. Run
+`git submodule update --init --recursive` (or `make ensure-submodules` to just check, or
+`{ensure_dna_script}` to also fix a narrower single-file case) **before** any `cfs` command
+in a fresh `gears-rust` checkout/worktree. `make cfs-repair`/`cfs-validate`/`cfs-validate-kits`
+already depend on `ensure-submodules` for exactly this reason; a bare `cfs init` run
+directly in the shell does not get that protection.
+
 ### Which guide is used where
 
 | Guide (`{variable}`) | Resolves to | Used by | Stage |
