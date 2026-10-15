@@ -2,12 +2,17 @@
 """Ensure guidelines/DNA is available before a gears preset relies on it.
 
 Constructor Studio kit script: lives in studio-kit-gears/scripts/ensure-dna.py.
-Resolves the actual on-disk location of `{dna_rust}`/`{dna_rest}` through
-`cfs resolve-vars` rather than a hardcoded path, because where a kit resource
-lands depends entirely on how it was installed (in-repo "register" mode keeps
-it at its source path; a standalone "copy" install places it under
+Resolves the actual on-disk location of `{dna_root}` through `cfs resolve-vars`
+rather than a hardcoded path, because where a kit resource lands depends
+entirely on how it was installed (in-repo "register" mode keeps it at its
+source path; a standalone "copy" install places it under
 `.cf-studio/config/kits/<slug>/...` instead) — never on a fixed project-root-
-relative path.
+relative path. `{dna_root}` itself is the submodule's root directory, not a
+path inside it, deliberately: an uninitialized submodule's mount-point
+directory still exists on disk (empty), so `cfs` never fails to load the kit
+manifest over this resource the way it would for a resource pointed inside an
+unfetched submodule. The canary file this script actually checks is
+`languages/RUST.md` under whatever `{dna_root}` resolves to.
 
 `guidelines/DNA` is additionally a git submodule in the `gears-rust` repo
 itself, so a checkout can have it registered but not fetched. A kit installed
@@ -60,10 +65,12 @@ def _is_dna_submodule_checkout(root):
 
 
 def _resolve_dna_rust_path():
-    """Resolve the actual installed location of {dna_rust} via `cfs resolve-vars`.
+    """Resolve the actual installed location of `{dna_root}/languages/RUST.md`
+    via `cfs resolve-vars` rather than a hardcoded path.
 
-    Returns the resolved absolute path, or None if `cfs` isn't available (the
-    caller falls back to a best-effort guess in that case).
+    Returns the resolved absolute path, or None if `cfs` isn't available or
+    `{dna_root}` didn't resolve (the caller falls back to a best-effort guess
+    in that case).
     """
     cfs_cmd = shutil.which("cfs")
     if cfs_cmd is None:
@@ -76,7 +83,10 @@ def _resolve_dna_rust_path():
         if result.returncode != 0:
             return None
         data = json.loads(result.stdout)
-        return data.get("variables", {}).get("dna_rust")
+        dna_root = data.get("variables", {}).get("dna_root")
+        if not dna_root:
+            return None
+        return os.path.join(dna_root, "languages", "RUST.md")
     except (OSError, json.JSONDecodeError):
         return None
 

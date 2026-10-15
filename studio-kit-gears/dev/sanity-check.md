@@ -55,11 +55,11 @@ traceable to the exact commit it actually tested, even across re-runs on differe
 
 ## Scenario 1 — Repo-wide `{variable}` citations resolve to real, matching content
 
-> Run `cfs resolve-vars --kit gears --flat` from `<WORKTREE_PATH>`. For each of these 18
+> Run `cfs resolve-vars --kit gears --flat` from `<WORKTREE_PATH>`. For each of these 17
 > variables — `{gears_md}`, `{architecture_manifest}`, `{toolkit_unified_system}`,
 > `{toolkit_pr_review_docs}`, `{repo_adrs}`, `{repo_arch}`, `{repo_playbook}`,
-> `{guidelines_security}`, `{guidelines_dependencies}`, `{guidelines_gts}`, `{dna_rust}`,
-> `{dna_rest}`, `{iso_29148}`, `{testing_policy}`, `{fips_requirements}`,
+> `{guidelines_security}`, `{guidelines_dependencies}`, `{guidelines_gts}`, `{dna_root}`,
+> `{iso_29148}`, `{testing_policy}`, `{fips_requirements}`,
 > `{gears_security}`, `{ensure_dna_script}`, `{e2e_guide}` — confirm it resolves to a real
 > path, open the resolved file/directory, and judge whether the real content genuinely
 > supports what cites it in
@@ -71,9 +71,11 @@ traceable to the exact commit it actually tested, even across re-runs on differe
 > were previously confirmed distinct, confirm that's still true). Report pass/fail per
 > variable, under 350 words total.
 
-**Expected**: all 18 PASS, no broken resolution, no redundancy between the two named
-pairs. (Last confirmed: 17/17 PASS, see PR #5326; `{e2e_guide}` added after that run —
-re-confirm it specifically on the next pass.)
+**Expected**: all 17 PASS, no broken resolution, no redundancy between the two named
+pairs. (Last confirmed: 17/17 PASS at an earlier, different 17-variable set — see PR #5326;
+`{e2e_guide}` was then added, then `{dna_rust}`/`{dna_rest}` were consolidated into one
+`{dna_root}` directory resource, landing back on 17 by coincidence, not by reverting
+anything — re-confirm `{dna_root}` and `{e2e_guide}` specifically on the next pass.)
 
 ## Scenario 2 — `ensure-dna.py`, all 3 real install states
 
@@ -114,7 +116,7 @@ deleted case. Re-run to confirm all 3 PASS cleanly post-fix.)
 > gears` (add `--force --approve-overwrite scripts --approve-overwrite
 > ensure_dna_script` plus any other resource ids it names as changed, if this isn't the
 > first install there). Then run `cfs resolve-vars --kit gears --flat` from that scratch
-> directory and confirm every one of the 18 variables in Scenario 1, plus
+> directory and confirm every one of the 17 variables in Scenario 1, plus
 > `{workflow_toolkit_review}` and `{workflow_gear_creator}`, now resolves to a path under
 > `.cf-studio/config/kits/gears/...` (NOT back into `<WORKTREE_PATH>`), and that the file
 > at that resolved path actually exists with non-trivial size (not a 0-byte stub). Report

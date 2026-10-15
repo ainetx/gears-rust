@@ -634,18 +634,10 @@ type = "file"
 user_modifiable = true
 
 [[kits.resources]]
-id = "dna_rust"
-kind = "other"
-source = "guidelines/DNA/languages/RUST.md"
-install_path = "guidelines/DNA/languages/RUST.md"
-type = "file"
-user_modifiable = true
-
-[[kits.resources]]
-id = "dna_rest"
+id = "dna_root"
 kind = "directory"
-source = "guidelines/DNA/REST"
-install_path = "guidelines/DNA/REST"
+source = "guidelines/DNA"
+install_path = "guidelines/DNA"
 type = "directory"
 user_modifiable = true
 
