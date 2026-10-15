@@ -16,7 +16,7 @@
 - [ ] Resolve the source FEATURE location from `@cpt-*` markers or the request; stop and ask when it cannot be resolved
 - [ ] Determine the traceability mode from the FEATURE or `artifacts.toml` (FULL or DOCS-ONLY)
 - [ ] Leave `{codebase_checklist}` to the review stage; authoring does not load it
-- [ ] Run `{ensure_dna_script}` before relying on `{dna_rust}`/`{dna_rest}` content
+- [ ] Run `{ensure_dna_script}` before relying on `{dna_root}/languages/RUST.md`/`{dna_root}/REST/` content
 
 ---
 
@@ -28,8 +28,8 @@
 - [ ] For the specific `{repo_arch}` subsystem precedent behind the chapter just routed to (deeper than that chapter's own linked docs): `errors/{DESIGN.md,PRD.md,categories/}` to choose among the canonical wire error categories rather than inventing an ad hoc one, `authorization/{TENANT_MODEL.md,RESOURCE_GROUP_MODEL.md,PERMISSION_GTS_TYPE.md}` for tenant/resource-group/permission modeling beyond `06`'s own linked `DESIGN.md`/`AUTHZ_USAGE_SCENARIOS.md`, `toolkit-oop/DESIGN.md` and `toolkit-contract-binding/DESIGN.md` (each directory's `PRD.md`/`ADR/*` for deeper rationale) for out-of-process/gRPC/cross-gear contract work, `database/TRADEOFFS.md` for schema/namespacing decisions on a new gear, and `throttling/DESIGN.md` when the slice needs rate limiting (no `{toolkit_unified_system}` chapter covers throttling today)
 - [ ] Follow cross-gear dependency rules, `SecurityContext` propagation, and middleware boundaries from `{gears_md}`
 - [ ] Follow `{guidelines_security}`, `{gears_security}`, and `{guidelines_dependencies}`
-- [ ] Follow repo Rust conventions from `{dna_rust}`
-- [ ] If the gear exposes HTTP/REST or SSE endpoints, follow `{dna_rest}` for status codes, versioning, batching, and querying conventions
+- [ ] Follow repo Rust conventions from `{dna_root}/languages/RUST.md`
+- [ ] If the gear exposes HTTP/REST or SSE endpoints, follow `{dna_root}/REST/` for status codes, versioning, batching, and querying conventions
 - [ ] Follow `{testing_policy}` for test strategy, coverage requirements, and which checks must be green locally before a PR
 - [ ] Add `@cpt-begin` and `@cpt-end` markers for implemented CDSL IDs when traceability mode is FULL
 - [ ] Generate marker IDs only from existing FEATURE CDSL IDs; never invent implementation-only CPT IDs

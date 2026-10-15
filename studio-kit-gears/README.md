@@ -60,16 +60,18 @@ relies entirely on the bundled copy from install time.
 
 **This matters before `{ensure_dna_script}` ever gets a chance to run, too**: `cfs`'s own
 kit-model loader validates every registered resource's `source` path eagerly, with no
-lazy/optional mode, so `cfs init`/`cfs generate-agents`/`cfs kit validate` on a `gears-rust`
-checkout whose `guidelines/DNA` submodule hasn't been fetched yet fails outright with
-`Resource 'dna_rust': source path 'guidelines/DNA/languages/RUST.md' does not exist`
-(repeated once per agent `cfs generate-agents` inspects) — this is `cfs`'s own validation
-behavior, not something a kit manifest can opt out of. Run
-`git submodule update --init --recursive` (or `make ensure-submodules` to just check, or
-`{ensure_dna_script}` to also fix a narrower single-file case) **before** any `cfs` command
-in a fresh `gears-rust` checkout/worktree. `make cfs-repair`/`cfs-validate`/`cfs-validate-kits`
-already depend on `ensure-submodules` for exactly this reason; a bare `cfs init` run
-directly in the shell does not get that protection.
+lazy/optional mode, so a resource pointed at a file or subdirectory *inside* an
+uninitialized submodule fails `cfs init`/`cfs generate-agents`/`cfs kit validate` outright
+with `Resource '<id>': source path '...' does not exist` — before `{ensure_dna_script}` or
+any other kit prerequisite ever runs, and with no manifest-level opt-out (confirmed: no
+`required`/`optional` field exists in `cfs`'s resource schema). `{dna_root}` is therefore
+pointed at the submodule's own root (`guidelines/DNA`), not a path inside it: an
+uninitialized git submodule's mount-point directory still exists on disk (empty, but
+`exists()` is true — confirmed empirically), so this resource always passes that check
+regardless of fetch state, and `{ensure_dna_script}` remains the thing that actually fetches
+real content into it before anything relies on it. `make cfs-repair`/`cfs-validate`/
+`cfs-validate-kits` additionally depend on `ensure-submodules` as defense in depth, for any
+*other* resource that might someday point inside an unfetched submodule.
 
 ### Which guide is used where
 
@@ -80,8 +82,7 @@ directly in the shell does not get that protection.
 | `{guidelines_security}` | `guidelines/SECURITY.md` | CODE rules; `artifacts/ISO_29148.md` | Authoring |
 | `{gears_security}` | `docs/security/SECURITY.md` | CODE, DESIGN rules | Authoring |
 | `{guidelines_dependencies}` | `guidelines/DEPENDENCIES.md` | CODE rules | Authoring |
-| `{dna_rust}` | `guidelines/DNA/languages/RUST.md` | CODE rules | Authoring |
-| `{dna_rest}` | `guidelines/DNA/REST/` | CODE rules (REST/SSE gears only) | Authoring |
+| `{dna_root}` | `guidelines/DNA/` | CODE rules, cited as `{dna_root}/languages/RUST.md` and, for REST/SSE gears only, `{dna_root}/REST/` | Authoring |
 | `{ensure_dna_script}` | `scripts/ensure-dna.py` | CODE rules (prerequisite) | Authoring |
 | `{testing_policy}` | `docs/TESTING.md` | CODE, DESIGN rules | Authoring |
 | `{fips_requirements}` | `docs/security/fips/` | CODE rules/checklist, DESIGN, PRD rules (FIPS-touching work only) | Both |
@@ -142,7 +143,7 @@ Shared chain infrastructure:
 | `{gears_doc_phase}` | `plans/doc-phase.md` | phase-plan/phase-dod for doc presets, no separate planning session needed |
 | `{gears_code_phase}` | `plans/code-phase.md` | same, for code presets |
 
-61 kit-scoped variables in total (plus 6 Studio-system ones — `{cf-studio-path}`,
+60 kit-scoped variables in total (plus 6 Studio-system ones — `{cf-studio-path}`,
 `{project_root}`, `{repo}`, `{base_dir}`, `{master_repo}`, `{cfs_cmd}` — that are not
 kit resources; `{cfs_cmd}` resolves to the Studio CLI invocation via the root router's
 own `CommandResolution`, same as every `{cfs_cmd} ...` command used throughout this doc).
