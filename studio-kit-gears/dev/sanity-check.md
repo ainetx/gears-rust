@@ -19,7 +19,10 @@ silently fall back to "find something similar."
 ## How to run
 
 Dispatch every scenario below as a **parallel** background agent (the `Agent` tool,
-`subagent_type: general-purpose`, one call per scenario, all in a single message).
+`subagent_type: general-purpose`, one call per scenario, all in a single message) —
+**unless a scenario's own text says to serialize it with another** (Scenario 2 does, with
+Scenario 3); read every scenario's full text before dispatching, and honor any such
+override over this default.
 Each prompt is self-contained — paste it verbatim as that agent's prompt, filling in
 only `<WORKTREE_PATH>` with the current worktree's absolute path. Every agent must be
 told explicitly: **read-only except where a scenario says otherwise; never run a git
@@ -42,7 +45,11 @@ fork/gears-kit/wire-repo-wide-conventions` (or whatever branch is current) and v
 `git log --oneline -3` plus `ls studio-kit-gears/workflows/` that the expected new files
 are actually present, before proceeding** — and tell the agent explicitly not to silently
 substitute a different target if the expected file is missing; it should stop and report
-that instead.
+that instead. This checks out the branch's live tip, not a pinned commit, by design — this
+suite is meant to keep validating this PR's actual current state, not a frozen snapshot of
+it. To keep results attributable despite that moving target, **always have scenarios 4-7
+report `git rev-parse HEAD` as the first line of their result**, so every pass/fail is
+traceable to the exact commit it actually tested, even across re-runs on different commits.
 
 ---
 
