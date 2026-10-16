@@ -120,9 +120,9 @@ deleted case. Re-run to confirm all 3 PASS cleanly post-fix.)
 > `{workflow_toolkit_review}` and `{workflow_gear_creator}`, now resolves to a path under
 > `.cf-studio/config/kits/gears/...` (NOT back into `<WORKTREE_PATH>`), and that the file
 > at that resolved path actually exists with non-trivial size (not a 0-byte stub). Report
-> a pass/fail table of all 20 resolved paths plus their byte sizes. Under 300 words.
+> a pass/fail table of all 19 resolved paths plus their byte sizes. Under 300 words.
 
-**Expected**: all 20 resolve under the scratch install's own `.cf-studio/`, all non-trivial
+**Expected**: all 19 resolve under the scratch install's own `.cf-studio/`, all non-trivial
 size. (Last confirmed for the first 17 of the then-19: PR #5326; `{workflow_toolkit_review}`
 and `{workflow_gear_creator}` were confirmed in that same PR, `{e2e_guide}` was added after
 — re-confirm it specifically under copy-mode, since `ensure-dna.py`'s own copy-mode
