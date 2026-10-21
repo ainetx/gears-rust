@@ -1499,6 +1499,15 @@
       "CategoryDto": {
         "description": "A category as returned to a caller.\n\nField naming is `snake_case`, applied by `#[toolkit_macros::api_dto]` rather\nthan chosen here: every gear's DTOs serialize the same way, so a client does\nnot have to know which service produced a payload.",
         "properties": {
+          "advanced_count": {
+            "description": "Of those, the settings tagged `advanced` — what a console shows apart\nfrom the standard ones, folded away by default, and must still account\nfor rather than omit silently.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "description": {
             "description": "Optional long-form description.",
             "type": [
@@ -1532,6 +1541,24 @@
           "name": {
             "description": "Display name.",
             "type": "string"
+          },
+          "retired_count": {
+            "description": "Of those, the settings `retired`: still filed under the category and\nlisted by its browse under their own outcome.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "setting_count": {
+            "description": "How many settings the category holds for the caller: every declaration\na browse of the category would list for it, whatever the status, so the\nnumber beside the category agrees with the table under it. Present when\nthe caller may read values; absent, with the two below, when it may not\n— as the settings themselves would be.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "sort_order": {
             "description": "Ordering weight; lower sorts first.",
@@ -1594,7 +1621,7 @@
         "type": "object"
       },
       "ChangeRecognitionScheduleRequest": {
-        "description": "The `POST /recognition-schedules/{schedule_id}/changes` request body: change or\ncancel an ASC 606 recognition schedule (design §3.6 / §4.6). `{schedule_id}`\n(the ACTIVE schedule to change) comes from the PATH; the target seller ledger\nis the body's own `tenant_id` (tenant in body, not path — the vhp-core REST\nconvention); the `(entry, post)` PEP gate authorizes it (a change marks/mints\nschedule state). `change_id` is the idempotency key (a replay returns the prior\nresult, minting no second schedule). `action` is `\"cancel\"` | `\"replace\"`.\n`treatment` is the upstream modification-accounting decision: `\"prospective\"` /\n`\"separate_contract\"` apply; `\"catch_up\"` / unknown is rejected\n`MODIFICATION_TREATMENT_REVIEW` (the ledger never silently treats a\nmodification as prospective). `new_segments` is required for a `replace` (the\nNEW version's plan of the remaining deferred), ignored for a `cancel`.",
+        "description": "The `POST /recognition-schedules/{schedule_id}/changes` request body: change or\ncancel an ASC 606 recognition schedule (design §3.6 / §4.6). `{schedule_id}`\n(the ACTIVE schedule to change) comes from the PATH; the target seller ledger\nis the body's own `tenant_id` (tenant in body, not path — the platform REST\nconvention); the `(entry, post)` PEP gate authorizes it (a change marks/mints\nschedule state). `change_id` is the idempotency key (a replay returns the prior\nresult, minting no second schedule). `action` is `\"cancel\"` | `\"replace\"`.\n`treatment` is the upstream modification-accounting decision: `\"prospective\"` /\n`\"separate_contract\"` apply; `\"catch_up\"` / unknown is rejected\n`MODIFICATION_TREATMENT_REVIEW` (the ledger never silently treats a\nmodification as prospective). `new_segments` is required for a `replace` (the\nNEW version's plan of the remaining deferred), ignored for a `cancel`.",
         "properties": {
           "action": {
             "description": "The change action: `\"cancel\"` | `\"replace\"`.",
@@ -2653,6 +2680,152 @@
         ],
         "type": "object"
       },
+      "CountedPageInfoDto": {
+        "description": "The cursors, the page size, and the size of the set the page was cut from.\n\nAliased to `CountedPageInfoDto` in the `OpenAPI` schema: types-registry\nalso exposes a `PageInfoDto`, of another shape, and every gear registers\ninto the one `OpenAPI` registry of the server, where the bare ident would\ncollide in `components.schemas`.",
+        "properties": {
+          "limit": {
+            "description": "The page size applied, which is the default when the caller named none.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "next_cursor": {
+            "description": "The cursor of the next page; `null` on the last one.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prev_cursor": {
+            "description": "The cursor of the previous page; `null` on the first one.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total_count": {
+            "description": "How many rows the walk holds in all, counted under the page's own\npredicate — the caller's scope, the visibility rules and the `$filter`,\nnever the cursor — at the time of the read, so every page of one walk\nreports the same total. Absent on the one listing whose items are not\nthe set it pages: the needs-review browse, which pages declarations\nand lists their flagged rows.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "limit"
+        ],
+        "type": "object"
+      },
+      "CountedPage_AuditRecordDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRecordDto"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/CountedPageInfoDto"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "CountedPage_CategoryDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryDto"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/CountedPageInfoDto"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "CountedPage_DeclarationDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DeclarationDto"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/CountedPageInfoDto"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "CountedPage_RestrictionDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RestrictionDto"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/CountedPageInfoDto"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "CountedPage_SearchHitDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHitDto"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/CountedPageInfoDto"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "CountedPage_SettingItemDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SettingItemDto"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/CountedPageInfoDto"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
       "CpuInfoDto": {
         "properties": {
           "cores": {
@@ -2800,6 +2973,13 @@
           },
           "description": {
             "description": "Optional long-form description.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "description": "Optional human-readable label, 1..256 characters after trimming. An\nexplicit `null` reads as unsupplied.",
             "type": [
               "string",
               "null"
@@ -3413,7 +3593,7 @@
         "description": "The response to a create: the declaration, and whether a retired one was\nrevived or the active one evolved rather than a new setting declared."
       },
       "CreditApplicationRequest": {
-        "description": "The `POST /credit-applications` request body: ONE wire shape for both wallet\nkinds, discriminated by `kind` (`\"grant\"` | `\"apply\"`). The target seller\nledger is the body's own `tenant_id` (tenant in body, not path — the vhp-core\nREST convention); the `(credit_application, write)` PEP gate authorizes it.\n`currency` + `currency_scale` constrain the whole application: a grant's\n`money` and every apply target must carry the same pair (a mismatch is a\nnamed error, never an implicit conversion).\n\nThe kind-specific fields are all optional on the wire and validated in\n[`Self::into_sdk`]: a `grant` requires `money` + `credit_grant_event_type`\n(and ignores `targets`); an `apply` requires a non-empty `targets` (and ignores\nthe grant fields). A missing required field or an unknown `kind` is rejected\n`400 InvalidArgument` before the SDK type is built.",
+        "description": "The `POST /credit-applications` request body: ONE wire shape for both wallet\nkinds, discriminated by `kind` (`\"grant\"` | `\"apply\"`). The target seller\nledger is the body's own `tenant_id` (tenant in body, not path — the platform\nREST convention); the `(credit_application, write)` PEP gate authorizes it.\n`currency` + `currency_scale` constrain the whole application: a grant's\n`money` and every apply target must carry the same pair (a mismatch is a\nnamed error, never an implicit conversion).\n\nThe kind-specific fields are all optional on the wire and validated in\n[`Self::into_sdk`]: a `grant` requires `money` + `credit_grant_event_type`\n(and ignores `targets`); an `apply` requires a non-empty `targets` (and ignores\nthe grant fields). A missing required field or an unknown `kind` is rejected\n`400 InvalidArgument` before the SDK type is built.",
         "properties": {
           "credit_application_id": {
             "description": "The `CREDIT_APPLY` idempotency business id (a replay returns the prior post).",
@@ -3552,7 +3732,7 @@
         "type": "object"
       },
       "CreditNoteRequest": {
-        "description": "The `POST /credit-notes` request body: a compensating credit note against a\nposted invoice (design §4.2). The target seller ledger is the body's own\n`tenant_id` (tenant in body, not path — the vhp-core REST convention); the\n`(entry, post)` PEP gate authorizes it (a credit note posts a balanced\ncompensating journal entry — the same data-plane post action as the\nrecognition run / invoice post). Idempotent on `credit_note_id` (the\n`(tenant, CREDIT_NOTE, credit_note_id)` engine claim): a replay returns the\nprior posting with `replayed = true`.\n\n`amount` is **incl-tax**; `tax_amount` is the reversed-tax slice of it;\n`requested_deferred` is the **split intent** — how much of the ex-tax\nrevenue portion (`amount − tax_amount`) targets the unreleased deferred\nbalance (the rest reduces recognized revenue). `goodwill = true` ⇒ an AR-only\ngoodwill credit (debits `GOODWILL`, touches no schedule, MUST carry\n`requested_deferred = 0`). A malformed shape (negative amounts, tax over\namount, deferred over ex-tax, empty reason, goodwill-with-deferred) is rejected\n`400` (`AMOUNT_OUT_OF_RANGE` / `InvalidArgument`) by the domain `validate_shape`;\nan indeterminable split is `CREDIT_NOTE_SPLIT_AMBIGUOUS`; an over-headroom note\nis `CREDIT_NOTE_EXCEEDS_HEADROOM`.",
+        "description": "The `POST /credit-notes` request body: a compensating credit note against a\nposted invoice (design §4.2). The target seller ledger is the body's own\n`tenant_id` (tenant in body, not path — the platform REST convention); the\n`(entry, post)` PEP gate authorizes it (a credit note posts a balanced\ncompensating journal entry — the same data-plane post action as the\nrecognition run / invoice post). Idempotent on `credit_note_id` (the\n`(tenant, CREDIT_NOTE, credit_note_id)` engine claim): a replay returns the\nprior posting with `replayed = true`.\n\n`amount` is **incl-tax**; `tax_amount` is the reversed-tax slice of it;\n`requested_deferred` is the **split intent** — how much of the ex-tax\nrevenue portion (`amount − tax_amount`) targets the unreleased deferred\nbalance (the rest reduces recognized revenue). `goodwill = true` ⇒ an AR-only\ngoodwill credit (debits `GOODWILL`, touches no schedule, MUST carry\n`requested_deferred = 0`). A malformed shape (negative amounts, tax over\namount, deferred over ex-tax, empty reason, goodwill-with-deferred) is rejected\n`400` (`AMOUNT_OUT_OF_RANGE` / `InvalidArgument`) by the domain `validate_shape`;\nan indeterminable split is `CREDIT_NOTE_SPLIT_AMBIGUOUS`; an over-headroom note\nis `CREDIT_NOTE_EXCEEDS_HEADROOM`.",
         "properties": {
           "amount": {
             "$ref": "#/components/schemas/MoneyDto",
@@ -3716,7 +3896,7 @@
         "type": "object"
       },
       "CurrencyScaleDto": {
-        "description": "One non-ISO currency-scale row to seed.",
+        "description": "One currency-scale row to seed: a code with no ISO 4217 minor-unit scale (such as `XTS`, or a\ncode ISO does not list), at its posting scale. A row for an ISO 4217 code with a scale may only\nrepeat that scale; another scale refuses the whole request (400).",
         "properties": {
           "currency": {
             "type": "string"
@@ -3943,6 +4123,13 @@
           },
           "description": {
             "description": "Optional long-form description.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "description": "Optional human-readable label; omitted when unset, never derived from\n`leaf_slug`.",
             "type": [
               "string",
               "null"
@@ -4727,7 +4914,7 @@
         "type": "object"
       },
       "EntityDto": {
-        "description": "One entity, projected by `$select` (SPEC §10.2).\n\n`gts_id`, `gts_uuid`, `kind` and `lifecycle_status` are always present, so a\nprojected item is identifiable, its kind needs no second read, and a tombstone is\nnever mistaken for an absence. An\nunselected field is omitted; a selected document that is JSON `null` stays\npresent as `null`. The three artifacts are absent on an Instance. Documents\nare written as stored, canonical text: keys sorted, no insignificant whitespace.",
+        "description": "One entity, projected by `$select` (SPEC §10.2).\n\n`gts_id`, `gts_uuid`, `kind` and `lifecycle_status` are always present, so a\nprojected item is identifiable, its kind needs no second read, and a tombstone is\nnever mistaken for an absence. An\nunselected field is omitted; a selected document that is JSON `null` stays\npresent as `null`. The three artifacts and `provenance` are absent on an\nInstance, selected or not. Documents\nare written as stored, canonical text: keys sorted, no insignificant whitespace.",
         "properties": {
           "content": {
             "description": "The whole authored document, either kind."
@@ -4759,7 +4946,8 @@
             "$ref": "#/components/schemas/OriginDto"
           },
           "provenance": {
-            "$ref": "#/components/schemas/ProvenanceDto"
+            "$ref": "#/components/schemas/ProvenanceDto",
+            "description": "Managed Type Schemas only: how the current revision was admitted."
           },
           "resolved_schema": {
             "description": "Type Schemas only."
@@ -4840,7 +5028,7 @@
         "type": "object"
       },
       "EntityPageDto": {
-        "description": "One bounded page of discovery results (SPEC §10.1's `EntityPage`).",
+        "description": "One bounded page of discovery results (SPEC §10.1's `ListEntitiesResponse`).",
         "properties": {
           "items": {
             "description": "Each item projected exactly as the exact read projects it.",
@@ -5365,13 +5553,6 @@
         ],
         "type": "object"
       },
-      "FileDtoList": {
-        "description": "List of files (`GET /files`).",
-        "items": {
-          "$ref": "#/components/schemas/FileDto"
-        },
-        "type": "array"
-      },
       "FileParserInfoDto": {
         "description": "REST DTO for file parser info response",
         "properties": {
@@ -5419,61 +5600,6 @@
           "timezone",
           "granularity",
           "fy_start"
-        ],
-        "type": "object"
-      },
-      "FlaggedOverrideDto": {
-        "description": "An override flagged for review, as the needs-review listing reports it.",
-        "properties": {
-          "etag": {
-            "description": "The override's value state tag — what a write correcting this row\npresents in `If-Match`.",
-            "type": "string"
-          },
-          "key": {
-            "description": "The setting key.",
-            "type": "string"
-          },
-          "last_change_at": {
-            "description": "When the override last changed.",
-            "type": "string"
-          },
-          "masked": {
-            "description": "Whether `value` carries the mask token.",
-            "type": "boolean"
-          },
-          "needs_review_detail": {
-            "description": "Why the override no longer validates.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "scope": {
-            "description": "Its scope path.",
-            "type": "string"
-          },
-          "set_by": {
-            "description": "Who set it: an administrator's identity, masked for a caller not\nauthorized for unmasked PII.",
-            "type": "string"
-          },
-          "tenant_id": {
-            "description": "The tenant whose override is flagged.",
-            "format": "uuid",
-            "type": "string"
-          },
-          "value": {
-            "description": "The stored value, masked by classification."
-          }
-        },
-        "required": [
-          "key",
-          "tenant_id",
-          "scope",
-          "value",
-          "masked",
-          "last_change_at",
-          "set_by",
-          "etag"
         ],
         "type": "object"
       },
@@ -5526,7 +5652,7 @@
         "type": "object"
       },
       "FxRateIngestRequest": {
-        "description": "Secondary manual / seed ingest of one FX rate into the local `ledger_fx_rate`\nstore (the primary path is the `RateProviderV1` plugin pull, design §4.6 /\ndecision 2). Upsert-keyed on `(tenant_id, base_currency, quote_currency,\nprovider)`: re-posting the same tuple overwrites the quote (`rate` /\n`as_of` / `fallback_order`) — idempotent on `(tenant, base, quote, provider,\nas_of)`. `tenant_id` rides the body (the vhp-core write convention, no tenant\nin the path).",
+        "description": "Secondary manual / seed ingest of one FX rate into the local `ledger_fx_rate`\nstore (the primary path is the `RateProviderV1` plugin pull, design §4.6 /\ndecision 2). Upsert-keyed on `(tenant_id, base_currency, quote_currency,\nprovider)`: re-posting the same tuple overwrites the quote (`rate` /\n`as_of` / `fallback_order`) — idempotent on `(tenant, base, quote, provider,\nas_of)`. `tenant_id` rides the body (the platform write convention, no tenant\nin the path).",
         "properties": {
           "as_of": {
             "description": "The publication timestamp that drives the staleness rule.",
@@ -7338,6 +7464,120 @@
         ],
         "type": "object"
       },
+      "LicenseCheckContext": {
+        "description": "The request's tenant context — the isolation scope of a check.\n\nBuilt from the caller's `SecurityContext` with\n[`from_security_context`](Self::from_security_context). Minimal today\n(tenant scope only); the extension point for future contextual evaluation\nsemantics. Every resolution is scoped to this tenant.\n\nUnknown fields are ignored, so a contextual input can be added without\nbreaking callers or older readers — but only one that satisfies **absence\nmust not grant more than presence**. An input that cannot is a new version of\nthe licensing contract, not an optional field (see \"Envelope evolution\" in\nthe module's DESIGN doc).",
+        "properties": {
+          "tenant_id": {
+            "description": "The tenant the check is scoped to. No cross-tenant resolution.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id"
+        ],
+        "type": "object"
+      },
+      "LicenseCheckRequest": {
+        "description": "The single input to a check — the contract's growth surface.\n\nNew inputs are added as fields here, never as new method parameters. Because\nthat growth is expected, the type is `#[non_exhaustive]` and is built through\n[`new`](Self::new), so adding an input stays additive instead of breaking\nevery caller's struct literal. Contextual inputs belong on\n[`LicenseCheckContext`].\n\nUnknown fields are **ignored** here too, under the same rule as\n[`LicenseCheckContext`].",
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/LicenseCheckContext",
+            "description": "The tenant isolation scope (caller-derived from its `SecurityContext`)."
+          },
+          "resource": {
+            "$ref": "#/components/schemas/LicenseResource",
+            "description": "The licensable thing being checked."
+          },
+          "subject": {
+            "$ref": "#/components/schemas/LicenseSubject",
+            "description": "Whom the license is checked for."
+          }
+        },
+        "required": [
+          "subject",
+          "resource",
+          "context"
+        ],
+        "type": "object"
+      },
+      "LicenseDecision": {
+        "description": "The result of a check.\n\nA negative answer is **not** an error — it is `LicenseDecision { granted:\nfalse, .. }`. [`diagnostics`](Self::diagnostics) is non-authoritative debug\ninfo about how the decision was reached (e.g. backend id, matched grant,\ndenial cause) and MUST NOT be required to interpret the boolean.\n\nUnknown fields are **ignored**; adding one is non-breaking in both directions\nbecause [`granted`](Self::granted) is authoritative on its own.",
+        "properties": {
+          "diagnostics": {
+            "additionalProperties": {},
+            "description": "Advisory, string-keyed debug information. Never authoritative.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "granted": {
+            "description": "Whether the resource is licensed to the subject at the time of the call.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "granted"
+        ],
+        "type": "object"
+      },
+      "LicenseResource": {
+        "additionalProperties": false,
+        "description": "The resource of a check — the licensable thing.\n\nAn instance of a derived Resource contract type (base\n`gts.cf.core.lic.res.v1~`). Without [`id`](Self::id) the check targets the\nwhole resource type (e.g. gating a `POST`); with it, a specific instance. Its\nwire shape is pinned by [`LicenseResourceV1`](crate::gts::LicenseResourceV1).",
+        "properties": {
+          "id": {
+            "description": "Optional instance id — a well-known name or a UUID (natural key);\nnon-empty, at most 255 characters per the base schema.\nAbsent = whole-type check; how that is answered is the backend's policy.",
+            "maxLength": 255,
+            "minLength": 1,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "description": "Licensing-relevant properties conforming to the derived contract's\nmetadata schema. Semantically opaque to the resolver; shape-validated\nthen forwarded to the plugin unchanged.\n\nRequired on the wire, so an omitted `metadata` is non-conforming and\n**must not** be defaulted to `{}` here. Pass an empty map when the\ncontract declares no metadata.",
+            "type": "object"
+          },
+          "type": {
+            "description": "The derived Resource contract type this object instantiates (e.g.\n`gts.cf.core.lic.res.v1~cf.genai.llm_gateway.model_usage.v1~`). Wire key\n`type`; the resolver resolves its schema to validate `metadata` and read\n`admitted_subjects`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "metadata"
+        ],
+        "type": "object"
+      },
+      "LicenseSubject": {
+        "additionalProperties": false,
+        "description": "The subject of a check — whom the license is checked for.\n\nAn instance of a derived Subject contract type (base\n`gts.cf.core.lic.subj.v1~`). Polymorphic: a tenant, a user, or any future\nsubject type — the resolver never assumes the subject is a tenant. Its wire\nshape is pinned by [`LicenseSubjectV1`](crate::gts::LicenseSubjectV1).",
+        "properties": {
+          "id": {
+            "description": "Optional instance id — a well-known name or a UUID (natural key);\nnon-empty, at most 255 characters per the base schema.\nAbsent for a type-level subject.",
+            "maxLength": 255,
+            "minLength": 1,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "description": "Licensing-relevant properties conforming to the derived contract's\nmetadata schema. Semantically opaque to the resolver; shape-validated\nthen forwarded to the plugin unchanged.\n\nRequired on the wire, so an omitted `metadata` is non-conforming and\n**must not** be defaulted to `{}` here. Pass an empty map when the\ncontract declares no metadata.",
+            "type": "object"
+          },
+          "type": {
+            "description": "The derived Subject contract type this object instantiates (e.g.\n`gts.cf.core.lic.subj.v1~cf.genai.llm_gateway.user.v1~`). Wire key\n`type`; the resolver resolves its schema to validate `metadata`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "metadata"
+        ],
+        "type": "object"
+      },
       "LifecycleNextDto": {
         "description": "A lifecycle change that takes effect on `from` (P-D-249).",
         "properties": {
@@ -8990,47 +9230,11 @@
         ],
         "type": "object"
       },
-      "Page_AuditRecordDto": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/AuditRecordDto"
-            },
-            "type": "array"
-          },
-          "page_info": {
-            "$ref": "#/components/schemas/PageInfo"
-          }
-        },
-        "required": [
-          "items",
-          "page_info"
-        ],
-        "type": "object"
-      },
       "Page_BalanceDto": {
         "properties": {
           "items": {
             "items": {
               "$ref": "#/components/schemas/BalanceDto"
-            },
-            "type": "array"
-          },
-          "page_info": {
-            "$ref": "#/components/schemas/PageInfo"
-          }
-        },
-        "required": [
-          "items",
-          "page_info"
-        ],
-        "type": "object"
-      },
-      "Page_CategoryDto": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/CategoryDto"
             },
             "type": "array"
           },
@@ -9152,24 +9356,6 @@
         ],
         "type": "object"
       },
-      "Page_DeclarationDto": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/DeclarationDto"
-            },
-            "type": "array"
-          },
-          "page_info": {
-            "$ref": "#/components/schemas/PageInfo"
-          }
-        },
-        "required": [
-          "items",
-          "page_info"
-        ],
-        "type": "object"
-      },
       "Page_DisputeView": {
         "properties": {
           "items": {
@@ -9211,6 +9397,24 @@
           "items": {
             "items": {
               "$ref": "#/components/schemas/ExceptionView"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "Page_FileDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FileDto"
             },
             "type": "array"
           },
@@ -9476,11 +9680,29 @@
         ],
         "type": "object"
       },
-      "Page_RestrictionDto": {
+      "Page_RetentionRuleDto": {
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/RestrictionDto"
+              "$ref": "#/components/schemas/RetentionRuleDto"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "Page_ReviewItemDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewItemDto"
             },
             "type": "array"
           },
@@ -9512,47 +9734,29 @@
         ],
         "type": "object"
       },
-      "Page_SearchHitDto": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SearchHitDto"
-            },
-            "type": "array"
-          },
-          "page_info": {
-            "$ref": "#/components/schemas/PageInfo"
-          }
-        },
-        "required": [
-          "items",
-          "page_info"
-        ],
-        "type": "object"
-      },
-      "Page_SettingItemDto": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SettingItemDto"
-            },
-            "type": "array"
-          },
-          "page_info": {
-            "$ref": "#/components/schemas/PageInfo"
-          }
-        },
-        "required": [
-          "items",
-          "page_info"
-        ],
-        "type": "object"
-      },
       "Page_SkuListItem": {
         "properties": {
           "items": {
             "items": {
               "$ref": "#/components/schemas/SkuListItem"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "Page_StorageDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StorageDto"
             },
             "type": "array"
           },
@@ -9697,6 +9901,24 @@
           "items": {
             "items": {
               "$ref": "#/components/schemas/UsersInfoUserDto"
+            },
+            "type": "array"
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        },
+        "required": [
+          "items",
+          "page_info"
+        ],
+        "type": "object"
+      },
+      "Page_VersionDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VersionDto"
             },
             "type": "array"
           },
@@ -10358,7 +10580,7 @@
         "type": "object"
       },
       "PostInvoiceRequestDto": {
-        "description": "The `POST /journal-entries` request body: a fully-recognized invoice\n(Variant A) to post. The target seller ledger is the body's own `tenant_id`\n(tenant in body, not path — the vhp-core REST convention); the `(entry,\npost)` PEP gate authorizes it.",
+        "description": "The `POST /journal-entries` request body: a fully-recognized invoice\n(Variant A) to post. The target seller ledger is the body's own `tenant_id`\n(tenant in body, not path — the platform REST convention); the `(entry,\npost)` PEP gate authorizes it.",
         "properties": {
           "correlation_id": {
             "description": "Caller-supplied trace token propagated onto the entry (NOT an authority\nclaim — the poster identity is the authenticated subject, stamped\nserver-side, never read from the body).",
@@ -11183,6 +11405,46 @@
         ],
         "type": "string"
       },
+      "PricingCurrency": {
+        "description": "One currency of the table (D-537).",
+        "properties": {
+          "code": {
+            "description": "Three uppercase letters.",
+            "type": "string"
+          },
+          "iso": {
+            "description": "True when ISO 4217 defines the code; false for a code that the deployment's\n`currency_scales` config adds.",
+            "type": "boolean"
+          },
+          "scale": {
+            "description": "The number of decimal places a new price in this currency uses, as a JSON integer.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "scale",
+          "iso"
+        ],
+        "type": "object"
+      },
+      "PricingCurrencyTable": {
+        "description": "The response of `GET /currencies` (D-537): every currency the table accepts, sorted by code.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PricingCurrency"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "PricingDecisionDto": {
         "description": "One reviewer decision; decisions of earlier generations are kept and marked stale.",
         "properties": {
@@ -11559,7 +11821,14 @@
             "type": "boolean"
           },
           "currency": {
+            "description": "The price's currency as stored with the price: its book's.",
             "type": "string"
+          },
+          "currency_scale": {
+            "description": "The currency's scale stored with the price, a JSON integer; never the current table's.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
           },
           "dim_value": {
             "description": "The value's chain; null for the default chain.",
@@ -11665,6 +11934,7 @@
           "charge_kind",
           "book_id",
           "currency",
+          "currency_scale",
           "version_no",
           "model",
           "price",
@@ -13117,6 +13387,7 @@
             "type": "string"
           },
           "min_fee": {
+            "description": "Exact decimal text, a JSON string; a JSON number is 400 `MIN_FEE_INVALID` (D-528).",
             "type": [
               "string",
               "null"
@@ -13205,6 +13476,16 @@
               "string",
               "null"
             ]
+          },
+          "currency": {
+            "description": "The price's currency, its book's, stored with the price.",
+            "type": "string"
+          },
+          "currency_scale": {
+            "description": "The currency's scale stored with the price, a JSON integer: the table's scale when the\nprice was written or last edited. An approved price keeps it whatever the table says later.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
           },
           "dim_value": {
             "type": [
@@ -13317,6 +13598,8 @@
           "price_book_entry_id",
           "version_no",
           "model",
+          "currency",
+          "currency_scale",
           "price_json",
           "eligibility",
           "effective_from",
@@ -13369,6 +13652,7 @@
             ]
           },
           "min_fee": {
+            "description": "Exact decimal text, a JSON string, or `null` to clear it; a JSON number is 400\n`MIN_FEE_INVALID` (D-528).",
             "type": [
               "string",
               "null"
@@ -13637,6 +13921,16 @@
       "PricingResolveBindingDto": {
         "description": "The price bound for the period, as stored.",
         "properties": {
+          "currency": {
+            "description": "The price's currency as stored with the price: its book's.",
+            "type": "string"
+          },
+          "currency_scale": {
+            "description": "The currency's scale stored with the price: the number of minor digits its money posts\nwith, a JSON integer. A later change of the currency table does not change it.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
           "dim_used": {
             "description": "The chain the bound price belongs to: the value, or null for the default chain.",
             "type": [
@@ -13699,6 +13993,8 @@
         },
         "required": [
           "price_id",
+          "currency",
+          "currency_scale",
           "price",
           "eligibility",
           "effective_from",
@@ -13744,14 +14040,8 @@
             "type": "string"
           },
           "currency": {
-            "description": "The book's currency.",
+            "description": "The book's currency. Each binding carries its price's own currency spec: the scale is\nstored per price, so prices of one book written under different scales each keep theirs.",
             "type": "string"
-          },
-          "currency_minor_digits": {
-            "description": "The currency's scale: the number of minor digits money carries.",
-            "format": "int32",
-            "minimum": 0,
-            "type": "integer"
           },
           "date": {
             "description": "The date resolved, `YYYY-MM-DD`.",
@@ -13776,10 +14066,6 @@
             "format": "int32",
             "type": "integer"
           },
-          "rounding_policy": {
-            "description": "The tenant's `default_rounding`, as stored: a string, since no CHECK guards the column\n(D-437, D-439).",
-            "type": "string"
-          },
           "state": {
             "$ref": "#/components/schemas/PricingResolvedRevisionState",
             "description": "The revision's state as it reads today (D-447): `published`, `superseded`, or `scheduled`\nfor a revision asked on or after its sale date while that date has not come yet (D-454). No\nother revision resolves."
@@ -13792,8 +14078,6 @@
           "state",
           "book_id",
           "currency",
-          "currency_minor_digits",
-          "rounding_policy",
           "date",
           "items"
         ],
@@ -14055,10 +14339,6 @@
               "null"
             ]
           },
-          "default_rounding": {
-            "description": "One of the five modes (D-437) once written through the door; a string, not an enum: no\nCHECK guards the column, and a legacy value reads back as stored (D-439).",
-            "type": "string"
-          },
           "default_tax_category": {
             "type": [
               "string",
@@ -14099,7 +14379,6 @@
         },
         "required": [
           "default_timing",
-          "default_rounding",
           "invoice_line_templates",
           "currencies",
           "version"
@@ -14121,10 +14400,6 @@
               "string",
               "null"
             ]
-          },
-          "default_rounding": {
-            "description": "`half_up`, `half_even`, `half_down`, `up` or `down` (D-437).",
-            "type": "string"
           },
           "default_tax_category": {
             "type": [
@@ -14154,7 +14429,6 @@
         },
         "required": [
           "default_timing",
-          "default_rounding",
           "invoice_line_templates",
           "currencies"
         ],
@@ -15260,30 +15534,20 @@
         "type": "string"
       },
       "ProvenanceDto": {
-        "description": "Who admitted the current revision and how. Selected as one group.",
+        "description": "Admission metadata of the current revision, selected as one group.",
         "properties": {
-          "compat_forced": {
-            "description": "Whether ADR-0004 `force` waived a cross-minor check; `null` for Instances.",
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "gts_impl_version": {
-            "type": "string"
-          },
-          "gts_spec_version": {
-            "type": "string"
+          "compatibility_check_skipped": {
+            "description": "`true`: an applicable cross-minor compatibility check was deliberately\nwaived with ADR-0004 `skip_compatibility_check`. `false`: no such waiver,\nwhich does not mean a check ran (a first minor or a major-0 version has\nnone). Derivation and every other admission check apply either way.",
+            "type": "boolean"
           }
         },
         "required": [
-          "gts_spec_version",
-          "gts_impl_version"
+          "compatibility_check_skipped"
         ],
         "type": "object"
       },
       "ProvisioningRequestDto": {
-        "description": "The provisioning request body: the target seller tenant, accounts, currency\nscales, and the fiscal-calendar config to seed in one transaction. The\ntenant is carried in the **body** (not the path) — the gear's REST surface is\ntenant-from-context/body per the vhp-core convention (RBAC/RMS), and a\nprovision targets a seller the caller authorizes via the PEP gate.",
+        "description": "The provisioning request body: the target seller tenant, accounts, currency\nscales, and the fiscal-calendar config to seed in one transaction. The\ntenant is carried in the **body** (not the path) — the gear's REST surface is\ntenant-from-context/body per the platform convention (RBAC/RMS), and a\nprovision targets a seller the caller authorizes via the PEP gate.",
         "properties": {
           "accounts": {
             "items": {
@@ -16462,7 +16726,7 @@
         ]
       },
       "RecordDisputePhaseRequest": {
-        "description": "The `POST /disputes/{dispute_id}/phases` request body: record one phase of a\nchargeback dispute. `{dispute_id}` (the dispute's external id) comes from the\nPATH; the target seller ledger is the body's own `tenant_id` (tenant in body,\nnot path — the vhp-core REST convention); the `(dispute, write)` PEP gate\nauthorizes it. The LEDGER chooses the variant at `opened` from `funds_at_open`\n(`\"withheld\"` ⇒ cash-hold, `\"not_moved\"` ⇒ AR-reclass); `phase` is one of\n`\"opened\" | \"won\" | \"lost\" | \"partial\"` (Group B implements `opened`).\n`cycle` defaults to 1 and increments on a re-open. `invoice_id` is required\nfor an AR-reclass `opened` (the disputed `(payer, invoice)` grain), ignored\nfor cash-hold. `disputed_amount` carries its currency and stored scale;\n`effective_at` `None` ⇒ stamped at post time.",
+        "description": "The `POST /disputes/{dispute_id}/phases` request body: record one phase of a\nchargeback dispute. `{dispute_id}` (the dispute's external id) comes from the\nPATH; the target seller ledger is the body's own `tenant_id` (tenant in body,\nnot path — the platform REST convention); the `(dispute, write)` PEP gate\nauthorizes it. The LEDGER chooses the variant at `opened` from `funds_at_open`\n(`\"withheld\"` ⇒ cash-hold, `\"not_moved\"` ⇒ AR-reclass); `phase` is one of\n`\"opened\" | \"won\" | \"lost\" | \"partial\"` (Group B implements `opened`).\n`cycle` defaults to 1 and increments on a re-open. `invoice_id` is required\nfor an AR-reclass `opened` (the disputed `(payer, invoice)` grain), ignored\nfor cash-hold. `disputed_amount` carries its currency and stored scale;\n`effective_at` `None` ⇒ stamped at post time.",
         "properties": {
           "cycle": {
             "description": "Re-entrancy counter; `None` ⇒ 1 (the first cycle).",
@@ -16733,7 +16997,7 @@
         "type": "object"
       },
       "RefundRequest": {
-        "description": "The `POST /refunds` request body: one PSP refund phase to record (the\n**money-out** side that unwinds a settled receipt). The target seller ledger\nis the body's own `tenant_id` (tenant in body, not path — the vhp-core REST\nconvention); the `(entry, post)` PEP gate authorizes it (a refund posts a\nbalanced journal entry into the seller's ledger, like the credit/debit notes,\ndesign §8 / Phase-1 precedent). `pattern` selects the economic shape\n(`\"A_UNALLOCATED\"` / `\"B_RESTORE_AR\"`); `phase` the lifecycle stage\n(`\"initiated\"` / `\"confirmed\"` / `\"rejected\"` / `\"voided\"` /\n`\"unknown_final\"`). `invoice_id` is required for Pattern B (the AR it\nrestores), absent for Pattern A. `two_stage` defaults to `true` (the\nconservative `REFUND_CLEARING` shape). `relates_to_refund_id` + `direction`\ndrive a refund-of-refund (Group E); a first-order refund omits both (direction\ndefaults to outbound). `amount` carries its currency and stored scale, which\nMUST match the origin settlement's.",
+        "description": "The `POST /refunds` request body: one PSP refund phase to record (the\n**money-out** side that unwinds a settled receipt). The target seller ledger\nis the body's own `tenant_id` (tenant in body, not path — the platform REST\nconvention); the `(entry, post)` PEP gate authorizes it (a refund posts a\nbalanced journal entry into the seller's ledger, like the credit/debit notes,\ndesign §8 / Phase-1 precedent). `pattern` selects the economic shape\n(`\"A_UNALLOCATED\"` / `\"B_RESTORE_AR\"`); `phase` the lifecycle stage\n(`\"initiated\"` / `\"confirmed\"` / `\"rejected\"` / `\"voided\"` /\n`\"unknown_final\"`). `invoice_id` is required for Pattern B (the AR it\nrestores), absent for Pattern A. `two_stage` defaults to `true` (the\nconservative `REFUND_CLEARING` shape). `relates_to_refund_id` + `direction`\ndrive a refund-of-refund (Group E); a first-order refund omits both (direction\ndefaults to outbound). `amount` carries its currency and stored scale, which\nMUST match the origin settlement's.",
         "properties": {
           "amount": {
             "$ref": "#/components/schemas/MoneyDto",
@@ -17846,13 +18110,6 @@
         ],
         "type": "object"
       },
-      "RetentionRuleDtoList": {
-        "description": "List of retention rules (`GET /retention-rules`).",
-        "items": {
-          "$ref": "#/components/schemas/RetentionRuleDto"
-        },
-        "type": "array"
-      },
       "ReturnPaymentRequest": {
         "description": "The `POST /payments/{payment_id}/returns` request body: claw a settled\nreceipt back out (the reversal of a money-in). `{payment_id}` (the original\nsettled payment) comes from the PATH; `psp_return_id` is the idempotency key\n(a re-post replays). `money` carries its currency and stored scale;\n`effective_at` `None` ⇒ stamped at post time.",
         "properties": {
@@ -17913,7 +18170,7 @@
         "type": "object"
       },
       "RevaluationRunRequest": {
-        "description": "Trigger an unrealized (Mode-B) revaluation for one period across the monetary\nscopes `{AR, UNALLOCATED, REUSABLE_CREDIT}` (design §4.5). `tenant_id` rides\nthe body (the vhp-core write convention). Each scope is idempotent on\n`(tenant, period_id, scope)` — re-posting the same period replays the\nalready-posted scopes. A no-op when the tenant is Mode-A\n(`revaluation_enabled = false`).",
+        "description": "Trigger an unrealized (Mode-B) revaluation for one period across the monetary\nscopes `{AR, UNALLOCATED, REUSABLE_CREDIT}` (design §4.5). `tenant_id` rides\nthe body (the platform write convention). Each scope is idempotent on\n`(tenant, period_id, scope)` — re-posting the same period replays the\nalready-posted scopes. A no-op when the tenant is Mode-A\n(`revaluation_enabled = false`).",
         "properties": {
           "period_id": {
             "description": "The period to revalue (`YYYYMM`). Must be an OPEN period at run time (the\nrun posts INTO it); a CLOSED/absent period is rejected by the posting gate.",
@@ -18241,6 +18498,73 @@
         ],
         "type": "object"
       },
+      "ReviewItemDto": {
+        "description": "One flagged override row, as `GET /settings-service/v1/settings/review`\nlists it: the row at the scope that holds it, where it must be fixed — not\na resolved value.",
+        "properties": {
+          "display_name": {
+            "description": "The declaration's display name; omitted when it has none, never derived\nfrom the key.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "etag": {
+            "description": "The override's value state tag — what a write correcting this row\npresents in `If-Match`.",
+            "type": "string"
+          },
+          "key": {
+            "description": "The setting key.",
+            "type": "string"
+          },
+          "last_change_at": {
+            "description": "When the override last changed.",
+            "type": "string"
+          },
+          "masked": {
+            "description": "Whether `value` carries the mask token.",
+            "type": "boolean"
+          },
+          "mode": {
+            "description": "`standard` or `advanced`, from the declaration.",
+            "type": "string"
+          },
+          "needs_review_detail": {
+            "description": "Why the override no longer validates.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope": {
+            "description": "Its scope path: `/` or `/tenants/{id}`.",
+            "type": "string"
+          },
+          "set_by": {
+            "description": "Who set it: an administrator's identity, masked for a caller not\nauthorized for unmasked PII.",
+            "type": "string"
+          },
+          "tenant_id": {
+            "description": "The tenant whose override is flagged.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "value": {
+            "description": "The stored value, masked by classification."
+          }
+        },
+        "required": [
+          "key",
+          "mode",
+          "tenant_id",
+          "scope",
+          "value",
+          "masked",
+          "last_change_at",
+          "set_by",
+          "etag"
+        ],
+        "type": "object"
+      },
       "ReviewThreadDto": {
         "description": "A mirrored PR review conversation thread, served by the extended API.",
         "properties": {
@@ -18442,6 +18766,13 @@
               "null"
             ]
           },
+          "display_name": {
+            "description": "The declaration's display name, when it has one; omitted when unset,\nnever derived from `leaf_slug`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "key": {
             "description": "The setting key.",
             "type": "string"
@@ -18451,7 +18782,7 @@
             "type": "string"
           },
           "matched_field": {
-            "description": "Which field matched: `key`, `description`, `category_name`,\n`default_value` or `value`.",
+            "description": "Which field matched: `key`, `display_name`, `description`,\n`category_name`, `default_value` or `value`.",
             "type": "string"
           },
           "mode": {
@@ -18474,7 +18805,7 @@
             ]
           },
           "value": {
-            "description": "The matched stored value — the override for a `value` hit, the Schema\nDefault for a `default_value` hit — masked by classification exactly\nas a read would mask it. Absent for a hit on the key, description or\ncategory name."
+            "description": "The matched stored value — the override for a `value` hit, the Schema\nDefault for a `default_value` hit — masked by classification exactly\nas a read would mask it. Absent for a hit on the key, display name,\ndescription or category name."
           }
         },
         "required": [
@@ -18684,7 +19015,7 @@
         "type": "object"
       },
       "SetFxRevaluationModeRequest": {
-        "description": "A new FX revaluation-mode version to write (VHP-1986). `effective_from`\ndefaults to now when omitted. An unknown `revaluation_mode` is rejected (400),\nnever coerced.",
+        "description": "A new FX revaluation-mode version to write. `effective_from`\ndefaults to now when omitted. An unknown `revaluation_mode` is rejected (400),\nnever coerced.",
         "properties": {
           "effective_from": {
             "description": "When this version takes effect; defaults to now.",
@@ -18731,7 +19062,7 @@
         "type": "object"
       },
       "SetPostingPolicyRequest": {
-        "description": "A new posting-policy version to write (VHP-1853). `effective_from` defaults to\nnow when omitted. An unknown `missing_mapping_mode`, or empty / non-positive /\nnon-monotone `ar_aging_thresholds`, is rejected (400), never coerced.",
+        "description": "A new posting-policy version to write. `effective_from` defaults to\nnow when omitted. An unknown `missing_mapping_mode`, or empty / non-positive /\nnon-monotone `ar_aging_thresholds`, is rejected (400), never coerced.",
         "properties": {
           "ar_aging_thresholds": {
             "description": "AR-aging bucket upper-bounds: strictly increasing positive day counts\n(e.g. `[30, 60, 90]` → `current / 1-30 / 31-60 / 61-90 / 90+`).",
@@ -18858,6 +19189,13 @@
               "null"
             ]
           },
+          "display_name": {
+            "description": "The declaration's display name; omitted when it has none, never derived\nfrom the key.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "effective": {
             "oneOf": [
               {
@@ -18866,17 +19204,6 @@
               {
                 "$ref": "#/components/schemas/EffectiveValueDto",
                 "description": "The effective value, when `outcome` is `resolved`."
-              }
-            ]
-          },
-          "flagged": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/FlaggedOverrideDto",
-                "description": "The flagged override, when `outcome` is `needs_review`."
               }
             ]
           },
@@ -18892,7 +19219,7 @@
             ]
           },
           "outcome": {
-            "description": "`resolved`, `needs_review`, `not_found`, `retired`, `unavailable` or\n`error`.",
+            "description": "`resolved`, `not_found`, `retired`, `unavailable` or `error`.",
             "type": "string"
           }
         },
@@ -18903,7 +19230,7 @@
         "type": "object"
       },
       "SettlePaymentRequest": {
-        "description": "The `POST /payments` request body: a settled payment to record (the\n**money-in** side). The target seller ledger is the body's own `tenant_id`\n(tenant in body, not path — the vhp-core REST convention); the `(payment,\nwrite)` PEP gate authorizes it. `gross` and `fee` carry their currency and\nstored scale; the scale is validated against the provisioned currency\nconfig at post time (a mismatch is rejected, never rescaled). `effective_at`\n`None` ⇒ the receipt is stamped at post time.",
+        "description": "The `POST /payments` request body: a settled payment to record (the\n**money-in** side). The target seller ledger is the body's own `tenant_id`\n(tenant in body, not path — the platform REST convention); the `(payment,\nwrite)` PEP gate authorizes it. `gross` and `fee` carry their currency and\nstored scale; the scale is validated against the provisioned currency\nconfig at post time (a mismatch is rejected, never rescaled). `effective_at`\n`None` ⇒ the receipt is stamped at post time.",
         "properties": {
           "effective_at": {
             "description": "Receipt instant; `None` ⇒ stamped at post time (current-month period).",
@@ -19771,13 +20098,6 @@
         ],
         "type": "object"
       },
-      "StorageDtoList": {
-        "description": "List of configured storage backends (`GET /storages`).",
-        "items": {
-          "$ref": "#/components/schemas/StorageDto"
-        },
-        "type": "array"
-      },
       "StreamMessageRequest": {
         "description": "Request body for `POST /v1/chats/{id}/messages:stream`.",
         "properties": {
@@ -19901,7 +20221,7 @@
       },
       "SubmitEntitiesRequest": {
         "additionalProperties": false,
-        "description": "A submission of one or more entities.\n\n`items` and not `entities`: the operation result, the discovery page and\n`Page<T>` all call their array `items`, so this is the house word for \"the\narray in this envelope\". It is also the name v1 does *not* use, which keeps\nthe T24a promotion a loud break rather than one that turns on the element\nshape.",
+        "description": "Entity submission envelope; `items` matches operation and page envelopes.",
         "properties": {
           "dry_run": {
             "description": "Predict the batch using one snapshot and an overlay of prior candidates' effects.\nRecord outcomes without entity-state writes or reservations.\n\nDefaults to `false`; participates in the idempotency fingerprint.",
@@ -19939,17 +20259,17 @@
               "null"
             ]
           },
-          "force": {
-            "description": "ADR-0004: waive one cross-minor check when the deployment permits it.\nIntra-entity revisions are never waivable. The revision records the\neffective waiver as `compat_forced`.",
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
           "gts_id": {
             "description": "The canonical GTS identifier. A non-canonical spelling is refused rather\nthan normalized.",
             "maxLength": 1024,
             "type": "string"
+          },
+          "skip_compatibility_check": {
+            "description": "ADR-0004: skip this candidate's applicable cross-minor compatibility check\nwhen the deployment permits it. Refused where there is no such check (first\nminor, major 0, major-only); intra-entity revisions and derivation are never\nskipped. Absent means `false`. A Type Schema read reports the effective outcome\nas `provenance.compatibility_check_skipped`.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         },
         "required": [
@@ -20852,7 +21172,7 @@
         "type": "object"
       },
       "TriggerRecognitionRunRequest": {
-        "description": "The `POST /recognition-runs` request body: trigger an ASC 606 recognition\nrun for one fiscal period (release the period's due `PENDING` segments). The\ntarget seller ledger is the body's own `tenant_id` (tenant in body, not path\n— the vhp-core REST convention); the `(entry, post)` PEP gate authorizes it\n(a run posts `DR CL / CR Revenue` journal entries). `run_id` is the\nrun-trigger idempotency key: `None` ⇒ the ledger mints a fresh one (a first,\nun-keyed trigger); a stable one makes retries idempotent (a replay returns\nthe prior run reference without starting a second run).",
+        "description": "The `POST /recognition-runs` request body: trigger an ASC 606 recognition\nrun for one fiscal period (release the period's due `PENDING` segments). The\ntarget seller ledger is the body's own `tenant_id` (tenant in body, not path\n— the platform REST convention); the `(entry, post)` PEP gate authorizes it\n(a run posts `DR CL / CR Revenue` journal entries). `run_id` is the\nrun-trigger idempotency key: `None` ⇒ the ledger mints a fresh one (a first,\nun-keyed trigger); a stable one makes retries idempotent (a replay returns\nthe prior run reference without starting a second run).",
         "properties": {
           "period_id": {
             "description": "The fiscal period to release due segments for (`YYYYMM`).",
@@ -21238,6 +21558,13 @@
           },
           "description": {
             "description": "Long-form description; `null` clears it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "description": "Human-readable label, 1..256 characters after trimming; `null` clears it.",
             "type": [
               "string",
               "null"
@@ -22216,13 +22543,6 @@
         ],
         "type": "object"
       },
-      "VersionDtoList": {
-        "description": "List of file versions (`GET /files/{id}/versions`).",
-        "items": {
-          "$ref": "#/components/schemas/VersionDto"
-        },
-        "type": "array"
-      },
       "ViolationDto": {
         "description": "One field-level violation.",
         "properties": {
@@ -22571,6 +22891,12 @@
         "bearerFormat": "JWT",
         "scheme": "bearer",
         "type": "http"
+      },
+      "internalToken": {
+        "description": "Platform-plane workload credential, validated by the receiving listener",
+        "in": "header",
+        "name": "x-toolkit-internal-token",
+        "type": "apiKey"
       }
     }
   },
@@ -26799,6 +27125,7 @@
     },
     "/api/file-storage/v1/files": {
       "get": {
+        "description": "Keyset pagination in either direction: `limit` (default 25, max 200) and the opaque `cursor` from the previous page's `page_info.next_cursor` or `page_info.prev_cursor`. The response carries `next_cursor` and `prev_cursor`. Canonical order is `created_at desc, file_id desc` -- see docs/api.md. `$top` and `$skiptoken` are synonyms of `limit` and `cursor`; `$filter`, `$orderby`, `$select` and every other `$` parameter are rejected with 400.",
         "operationId": "file_storage.list_files",
         "parameters": [
           {
@@ -26820,7 +27147,7 @@
             }
           },
           {
-            "description": "Page size",
+            "description": "Page size (default 25, max 200); alias `$top`",
             "in": "query",
             "name": "limit",
             "required": false,
@@ -26829,12 +27156,12 @@
             }
           },
           {
-            "description": "Offset",
+            "description": "Opaque continuation token from the previous page; alias `$skiptoken`",
             "in": "query",
-            "name": "offset",
+            "name": "cursor",
             "required": false,
             "schema": {
-              "type": "integer"
+              "type": "string"
             }
           }
         ],
@@ -26843,7 +27170,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileDtoList"
+                  "$ref": "#/components/schemas/Page_FileDto"
                 }
               }
             },
@@ -26895,7 +27222,7 @@
             "bearerAuth": []
           }
         ],
-        "summary": "List files for an owner (owner_kind + owner_id required)",
+        "summary": "List files for an owner (owner_kind + owner_id required, cursor pagination)",
         "tags": [
           "File Storage"
         ]
@@ -28199,6 +28526,7 @@
     },
     "/api/file-storage/v1/files/{id}/versions": {
       "get": {
+        "description": "Keyset pagination in either direction: `limit` (default 25, max 200) and the opaque `cursor` from the previous page's `page_info.next_cursor` or `page_info.prev_cursor`. The response carries `next_cursor` and `prev_cursor`. Canonical order is `created_at desc, version_id desc` -- see docs/api.md. `$top` and `$skiptoken` are synonyms of `limit` and `cursor`; `$filter`, `$orderby`, `$select` and every other `$` parameter are rejected with 400.",
         "operationId": "file_storage.list_versions",
         "parameters": [
           {
@@ -28211,7 +28539,7 @@
             }
           },
           {
-            "description": "Page size",
+            "description": "Page size (default 25, max 200); alias `$top`",
             "in": "query",
             "name": "limit",
             "required": false,
@@ -28220,12 +28548,12 @@
             }
           },
           {
-            "description": "Offset",
+            "description": "Opaque continuation token from the previous page; alias `$skiptoken`",
             "in": "query",
-            "name": "offset",
+            "name": "cursor",
             "required": false,
             "schema": {
-              "type": "integer"
+              "type": "string"
             }
           }
         ],
@@ -28234,11 +28562,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VersionDtoList"
+                  "$ref": "#/components/schemas/Page_VersionDto"
                 }
               }
             },
             "description": "Versions"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "content": {
@@ -28286,7 +28624,7 @@
             "bearerAuth": []
           }
         ],
-        "summary": "List all versions of a file",
+        "summary": "List a file's versions, newest first (cursor pagination)",
         "tags": [
           "File Storage"
         ]
@@ -28703,17 +29041,48 @@
     },
     "/api/file-storage/v1/retention-rules": {
       "get": {
+        "description": "Keyset pagination in either direction: `limit` (default 25, max 200) and the opaque `cursor` from the previous page's `page_info.next_cursor` or `page_info.prev_cursor`. The response carries `next_cursor` and `prev_cursor`. Canonical order is `created_at desc, rule_id desc` -- see docs/api.md. `$top` and `$skiptoken` are synonyms of `limit` and `cursor`; `$filter`, `$orderby`, `$select` and every other `$` parameter are rejected with 400.",
         "operationId": "file_storage.list_retention_rules",
+        "parameters": [
+          {
+            "description": "Page size (default 25, max 200); alias `$top`",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page; alias `$skiptoken`",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RetentionRuleDtoList"
+                  "$ref": "#/components/schemas/Page_RetentionRuleDto"
                 }
               }
             },
             "description": "Retention rules"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "content": {
@@ -28751,7 +29120,7 @@
             "bearerAuth": []
           }
         ],
-        "summary": "List all retention rules for the caller's tenant",
+        "summary": "List retention rules for the caller's tenant",
         "tags": [
           "File Storage"
         ]
@@ -28911,17 +29280,48 @@
     },
     "/api/file-storage/v1/storages": {
       "get": {
+        "description": "Keyset pagination in either direction: `limit` (default 25, max 200) and the opaque `cursor` from the previous page's `page_info.next_cursor` or `page_info.prev_cursor`. The response carries `next_cursor` and `prev_cursor`. Canonical order is `id asc` -- see docs/api.md. `$top` and `$skiptoken` are synonyms of `limit` and `cursor`; `$filter`, `$orderby`, `$select` and every other `$` parameter are rejected with 400.",
         "operationId": "file_storage.list_storages",
+        "parameters": [
+          {
+            "description": "Page size (default 25, max 200); alias `$top`",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque continuation token from the previous page; alias `$skiptoken`",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StorageDtoList"
+                  "$ref": "#/components/schemas/Page_StorageDto"
                 }
               }
             },
             "description": "Backends"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "content": {
@@ -28959,7 +29359,7 @@
             "bearerAuth": []
           }
         ],
-        "summary": "List configured storage backends and capabilities",
+        "summary": "List configured storage backends and capabilities (cursor pagination)",
         "tags": [
           "File Storage"
         ]
@@ -29137,7 +29537,12 @@
             },
             "description": "Internal Server Error"
           }
-        }
+        },
+        "security": [
+          {
+            "internalToken": []
+          }
+        ]
       }
     },
     "/bss-approvals/v1/approval-units": {
@@ -32988,7 +33393,7 @@
         ]
       },
       "post": {
-        "description": "Writes a new effective-dated FX revaluation-mode version (`MODE_A` defer-to-ERP | `MODE_B` BSS-is-ledger-of-record) for the caller's tenant (VHP-1986). Append-only: a new version supersedes; the revaluation job / period-close pick the latest effective_from (highest version on a tie). An unknown mode is rejected (400), never coerced. Requires `config_write.v1`.",
+        "description": "Writes a new effective-dated FX revaluation-mode version (`MODE_A` defer-to-ERP | `MODE_B` BSS-is-ledger-of-record) for the caller's tenant. Append-only: a new version supersedes; the revaluation job / period-close pick the latest effective_from (highest version on a tie). An unknown mode is rejected (400), never coerced. Requires `config_write.v1`.",
         "operationId": "bss_ledger.set_fx_revaluation_mode",
         "requestBody": {
           "content": {
@@ -35793,7 +36198,7 @@
         ]
       },
       "post": {
-        "description": "Writes a new effective-dated invoice-posting policy version (the missing-mapping mode + the AR-aging bucket thresholds) for the caller's tenant (VHP-1853). Append-only: a new version supersedes; the orchestrator / aging read pick the latest effective_from (highest version on a tie). An unknown mode or empty / non-positive / non-monotone thresholds are rejected (400), never coerced. Requires `config_write.v1`.",
+        "description": "Writes a new effective-dated invoice-posting policy version (the missing-mapping mode + the AR-aging bucket thresholds) for the caller's tenant. Append-only: a new version supersedes; the orchestrator / aging read pick the latest effective_from (highest version on a tie). An unknown mode or empty / non-positive / non-monotone thresholds are rejected (400), never coerced. Requires `config_write.v1`.",
         "operationId": "bss_ledger.set_posting_policy",
         "requestBody": {
           "content": {
@@ -35871,7 +36276,7 @@
     },
     "/bss-ledger/v1/provisioning": {
       "post": {
-        "description": "Seeds the chart of accounts, non-ISO currency scales, the fiscal-calendar config, and the initial OPEN fiscal period for the seller legal-entity named by the body's `tenant_id`. Re-calls are additive: existing rows are a no-op.",
+        "description": "Seeds the chart of accounts, the currency scales of codes with no ISO 4217 minor-unit scale, the fiscal-calendar config, and the initial OPEN fiscal period for the seller legal-entity named by the body's `tenant_id`. An ISO 4217 code always has its ISO scale: a row for it may only repeat that scale, and another scale refuses the whole request with 400 and writes nothing. Re-calls are additive: existing rows are a no-op.",
         "operationId": "bss_ledger.provision",
         "requestBody": {
           "content": {
@@ -38070,7 +38475,7 @@
     },
     "/bss-pricing/v1/approval-units/{id}/approve": {
       "post": {
-        "description": "Records an approving vote on the generation the reviewer saw; the vote that reaches the quorum applies the unit (a plan revision whose sale date is after today is scheduled for that date, D-449). The vote's note is at most 2000 characters. Refusals: 400 GENERATION_MISMATCH, UNIT_STALE or NOTE_TOO_LONG; 403 SOD_VIOLATION for the submitter or the author; 409 DUPLICATE_VOTE, UNIT_ALREADY_DECIDED or APPLY_REFUSED, and PRICE_ALREADY_STARTED when a price the unit cancels started after its submit (D-520); 503 REGISTRY_UNAVAILABLE when Products cannot answer a read the applying vote's rules make: a plan revision's checks, or a usage chain's dated metering (D-402).",
+        "description": "Records an approving vote on the generation the reviewer saw; the vote that reaches the quorum applies the unit (a plan revision whose sale date is after today is scheduled for that date, D-449). The vote's note is at most 2000 characters. Refusals: 400 GENERATION_MISMATCH, UNIT_STALE or NOTE_TOO_LONG; 403 SOD_VIOLATION for the submitter or the author; 409 DUPLICATE_VOTE, UNIT_ALREADY_DECIDED or APPLY_REFUSED, and PRICE_ALREADY_STARTED when a price the unit cancels started after its submit (D-520), CURRENCY_SCALE_CHANGED when a draft of the unit is stored at another scale than the currency table gives today (the submitter withdraws the unit, edits the draft and submits it again; a cancel or end row keeps its price's scale and is never refused for it), or BOOK_CURRENCY_INVALID when the table no longer lists the book's currency; 503 REGISTRY_UNAVAILABLE when Products cannot answer a read the applying vote's rules make: a plan revision's checks, or a usage chain's dated metering (D-402).",
         "operationId": "bss_pricing.approve_unit",
         "parameters": [
           {
@@ -38466,6 +38871,113 @@
           }
         ],
         "summary": "Withdraw an approval unit",
+        "tags": [
+          "Pricing"
+        ]
+      }
+    },
+    "/bss-pricing/v1/currencies": {
+      "get": {
+        "description": "Returns every currency a price book can use, with the number of decimal places a new price in that currency uses: the active ISO 4217 codes, and the codes the deployment's currency_scales config adds (iso false). The list is sorted by code and is the same for every tenant; the settings' currencies limit only which currency a new book can use (D-438, D-529, D-537). A saved price keeps the scale it was saved with (D-531). A caller without config read gets 403.",
+        "operationId": "bss_pricing.list_currencies",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingCurrencyTable"
+                }
+              }
+            },
+            "description": "Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List the currency table",
         "tags": [
           "Pricing"
         ]
@@ -42296,7 +42808,7 @@
         ]
       },
       "post": {
-        "description": "Adds a draft price to an entry's chain, and a temporary price's return partner with it; the Idempotency-Key replays the answer. The money is in the entry's model and the price carries no model of its own (D-427). The note is at most 2000 characters (D-457). Refusals: 400 for a rule the price breaks (for example PRICE_MISSING for money of another model's shape, AMOUNT_INVALID, WINDOW_START_IN_PAST, DIM_VALUE_UNKNOWN or PRICE_INSIDE_TEMPORARY), or NOTE_TOO_LONG; 409 ENTRY_REFERENCE_LOST.",
+        "description": "Adds a draft price to an entry's chain, and a temporary price's return partner with it; the Idempotency-Key replays the answer. The money is in the entry's model and the price carries no model of its own (D-427). The note is at most 2000 characters (D-457). Every decimal is a JSON string of plain decimal text, stored in its canonical form (30.00 is stored as 30; D-527, D-528). Refusals: 400 for a rule the price breaks (for example PRICE_MISSING for money of another model's shape, AMOUNT_INVALID for a decimal sent as a JSON number, text that is not plain decimal text, a negative value or a zero package size, the message naming the field, AMOUNT_OUT_OF_RANGE for a decimal over its limit (a rate takes 12 fractional places, a threshold or a package size 28, and any decimal 28 digits), MIN_FEE_INVALID, WINDOW_START_IN_PAST, DIM_VALUE_UNKNOWN or PRICE_INSIDE_TEMPORARY), or NOTE_TOO_LONG; 409 ENTRY_REFERENCE_LOST, or BOOK_CURRENCY_INVALID when the currency table no longer lists the book's currency. A new price, and a temporary price's return, store the book's currency at the scale the currency table gives it today (currency, currency_scale; D-531).",
         "operationId": "bss_pricing.create_price",
         "parameters": [
           {
@@ -42708,7 +43220,7 @@
         }
       },
       "post": {
-        "description": "Creates a price book of the tenant with a code, a name, one currency, an optional validity window and an optional description of at most 2000 characters (D-444); the Idempotency-Key replays the first answer. The currency must be one the tenant settings offer, when they offer any (D-438). The code is at most 64 characters and the name 200 (D-457). Refusals: 400 BOOK_CODE_REQUIRED, BOOK_NAME_REQUIRED, BOOK_CURRENCY_INVALID, BOOK_VALIDITY_INVALID, BOOK_DESCRIPTION_TOO_LONG, or FIELD_TOO_LONG on a code or a name over its cap; 409 CURRENCY_NOT_OFFERED, BOOK_CODE_TAKEN or IDEMPOTENCY_CONFLICT.",
+        "description": "Creates a price book of the tenant with a code, a name, one currency, an optional validity window and an optional description of at most 2000 characters (D-444); the Idempotency-Key replays the first answer. The currency must be one the currency table resolves: an ISO 4217 code with a scale, or a non-ISO code the deployment's currency_scales adds (D-529); else 400 BOOK_CURRENCY_INVALID. It must also be one the tenant settings offer, when they offer any (D-438). The code is at most 64 characters and the name 200 (D-457). Refusals: 400 BOOK_CODE_REQUIRED, BOOK_NAME_REQUIRED, BOOK_CURRENCY_INVALID, BOOK_VALIDITY_INVALID, BOOK_DESCRIPTION_TOO_LONG, or FIELD_TOO_LONG on a code or a name over its cap; 409 CURRENCY_NOT_OFFERED, BOOK_CODE_TAKEN or IDEMPOTENCY_CONFLICT.",
         "operationId": "bss_pricing.create_book",
         "parameters": [
           {
@@ -43933,7 +44445,7 @@
         ]
       },
       "post": {
-        "description": "Submits the book's draft prices, all of them or the listed price_ids, optionally on a common effective date, as one prices approval unit; at quorum 0 it applies at once. An optional note for the approver is stored on the unit as submit_note (D-464). Refusals: 400 NOTE_TOO_LONG for a note over 2000 characters, judged before anything is read; 400 NO_DRAFT_PRICES, PRICE_NOT_IN_BOOK or PAIR_SPLIT, or END_DATE_INVALID for an end (D-521); 409 PRICE_LOCKED_PENDING or UNIT_CONTENDED, or a guard of a cancel or an end (PRICE_NOT_SCHEDULED, PRICE_CHANGE_PENDING when another pending change or the same unit names its price, PRICE_BOUND, PRICE_ALREADY_ENDED, D-520, D-521), or a price of a released entry (BOOK_ARCHIVED while its book is archived, else ENTRY_REFERENCE_RELEASED, D-522); 503 REGISTRY_UNAVAILABLE when Products cannot answer a usage chain's dated metering read (D-402).",
+        "description": "Submits the book's draft prices, all of them or the listed price_ids, optionally on a common effective date, as one prices approval unit; at quorum 0 it applies at once. An optional note for the approver is stored on the unit as submit_note (D-464). Refusals: 400 NOTE_TOO_LONG for a note over 2000 characters, judged before anything is read; 400 NO_DRAFT_PRICES, PRICE_NOT_IN_BOOK or PAIR_SPLIT, or END_DATE_INVALID for an end (D-521); 409 PRICE_LOCKED_PENDING or UNIT_CONTENDED, or a guard of a cancel or an end (PRICE_NOT_SCHEDULED, PRICE_CHANGE_PENDING when another pending change or the same unit names its price, PRICE_BOUND, PRICE_ALREADY_ENDED, D-520, D-521), or a price of a released entry (BOOK_ARCHIVED while its book is archived, else ENTRY_REFERENCE_RELEASED, D-522), or CURRENCY_SCALE_CHANGED for a draft stored at another scale than the currency table gives today (edit the draft and submit it again), or BOOK_CURRENCY_INVALID when the table no longer lists the book's currency; 503 REGISTRY_UNAVAILABLE when Products cannot answer a usage chain's dated metering read (D-402).",
         "operationId": "bss_pricing.publish_changes",
         "parameters": [
           {
@@ -44440,7 +44952,7 @@
         ]
       },
       "patch": {
-        "description": "Changes an unlocked draft price of its author at the version the author read (If-Match). The temporary half of a draft takes effective_from and temporary_until: its pair is built again over the new dates in the same transaction (D-443) - its return re-derived in place, deleted when the chain's next price starts on the new end or nothing of the chain is in force there, or created when a price is to be returned to - and both halves are judged as the create judges them; the answer is the edited price, its paired_price_id naming its partner now, or null. A return's own dates, a temporary price's chain (dim_value), an end on any other price and a null end are 400 TEMPORARY_PRICE_FIXED. Refusals: 400 for a rule the change breaks (for example WINDOW_END_INVALID, WINDOW_START_IN_PAST or TEMPORARY_SPANS_A_CHANGE), or NOTE_TOO_LONG on a note over 2000 characters (D-457); 403 NOT_DRAFT_AUTHOR; 409 PRICE_NOT_DRAFT (the price or its partner, or a cancel or end row, which is deleted instead, D-520) or STALE_REVISION.",
+        "description": "Changes an unlocked draft price of its author at the version the author read (If-Match). The temporary half of a draft takes effective_from and temporary_until: its pair is built again over the new dates in the same transaction (D-443) - its return re-derived in place, deleted when the chain's next price starts on the new end or nothing of the chain is in force there, or created when a price is to be returned to - and both halves are judged as the create judges them; the answer is the edited price, its paired_price_id naming its partner now, or null. A return's own dates, a temporary price's chain (dim_value), an end on any other price and a null end are 400 TEMPORARY_PRICE_FIXED. Every PATCH, whatever it changes, stores the currency scale the currency table gives the book's currency today, and the fee is judged on that scale: a draft refused with CURRENCY_SCALE_CHANGED is edited (a note is enough) and submitted again. Of a temporary pair whose dates stay, only the edited half takes the new scale. Refusals: 400 for a rule the change breaks (for example AMOUNT_INVALID or AMOUNT_OUT_OF_RANGE as on the create, MIN_FEE_INVALID, WINDOW_END_INVALID, WINDOW_START_IN_PAST or TEMPORARY_SPANS_A_CHANGE), or NOTE_TOO_LONG on a note over 2000 characters (D-457); 403 NOT_DRAFT_AUTHOR; 409 PRICE_NOT_DRAFT (the price or its partner, or a cancel or end row, which is deleted instead, D-520), STALE_REVISION, or BOOK_CURRENCY_INVALID when the currency table no longer lists the book's currency.",
         "operationId": "bss_pricing.patch_price",
         "parameters": [
           {
@@ -44867,7 +45379,7 @@
     },
     "/bss-pricing/v1/prices/{id}/submit": {
       "post": {
-        "description": "Puts one draft price into a prices approval unit; at quorum 0 the unit applies at once. A half of a temporary pair is not submitted alone: it is 400 PAIR_SPLIT, and the pair goes through POST /price-books/{id}/publish-changes, which completes it (D-405). It takes no body and no note: a note for the approver travels with publish-changes (D-464). Refusals: 400 BODY_UNEXPECTED for a body with any key; 400 PAIR_SPLIT, or a rule the price breaks at submit (for example WINDOW_START_IN_PAST, PAIR_RETURN_STALE or CHAIN_MODEL_CHANGED, or END_DATE_INVALID for an end, D-521); 409 PRICE_NOT_DRAFT, PRICE_LOCKED_PENDING or UNIT_CONTENDED, or a guard of a cancel or an end (PRICE_NOT_SCHEDULED, PRICE_CHANGE_PENDING, PRICE_BOUND, PRICE_ALREADY_ENDED, D-520, D-521), or a price of a released entry (BOOK_ARCHIVED while its book is archived, else ENTRY_REFERENCE_RELEASED, D-522); 503 REGISTRY_UNAVAILABLE when Products cannot answer a usage chain's dated metering read (D-402).",
+        "description": "Puts one draft price into a prices approval unit; at quorum 0 the unit applies at once. A half of a temporary pair is not submitted alone: it is 400 PAIR_SPLIT, and the pair goes through POST /price-books/{id}/publish-changes, which completes it (D-405). It takes no body and no note: a note for the approver travels with publish-changes (D-464). Refusals: 400 BODY_UNEXPECTED for a body with any key; 400 PAIR_SPLIT, or a rule the price breaks at submit (for example WINDOW_START_IN_PAST, PAIR_RETURN_STALE or CHAIN_MODEL_CHANGED, or END_DATE_INVALID for an end, D-521); 409 PRICE_NOT_DRAFT, PRICE_LOCKED_PENDING or UNIT_CONTENDED, or a guard of a cancel or an end (PRICE_NOT_SCHEDULED, PRICE_CHANGE_PENDING, PRICE_BOUND, PRICE_ALREADY_ENDED, D-520, D-521), or a price of a released entry (BOOK_ARCHIVED while its book is archived, else ENTRY_REFERENCE_RELEASED, D-522), or CURRENCY_SCALE_CHANGED for a draft stored at another scale than the currency table gives today (edit the draft and submit it again), or BOOK_CURRENCY_INVALID when the table no longer lists the book's currency; 503 REGISTRY_UNAVAILABLE when Products cannot answer a usage chain's dated metering read (D-402).",
         "operationId": "bss_pricing.submit_price",
         "parameters": [
           {
@@ -45275,7 +45787,7 @@
     },
     "/bss-pricing/v1/settings": {
       "get": {
-        "description": "Returns the tenant's billing defaults (timing, rounding, GL code, tax category), invoice-line templates by SKU type and the currencies a new book may take (empty: any), with who wrote them last and when, and its version as the ETag; the defaults apply, with no writer, until the settings are first written. An If-None-Match that matches that ETag by weak comparison is 304 with an empty body and the same ETag; both answers carry Cache-Control private, no-cache (D-518).",
+        "description": "Returns the tenant's billing defaults (timing, GL code, tax category), invoice-line templates by SKU type and the currencies a new book may take (empty: any), with who wrote them last and when, and its version as the ETag; the defaults apply, with no writer, until the settings are first written. An If-None-Match that matches that ETag by weak comparison is 304 with an empty body and the same ETag; both answers carry Cache-Control private, no-cache (D-518).",
         "operationId": "bss_pricing.get_settings",
         "parameters": [
           {
@@ -45422,7 +45934,7 @@
         ]
       },
       "put": {
-        "description": "Replaces the tenant settings at the version the caller read (If-Match), currencies included (required; [] offers any currency, D-438), and records the caller and the time. Rounding is half_up, half_even, half_down, up or down (D-437). A GL code or a tax category other than the stored one is at most 64 characters, and a line template other than the one stored for its SKU type 2000; a stored text sent back unchanged passes whatever its length (D-457). Refusals: 400 TIMING_INVALID, ROUNDING_REQUIRED, ROUNDING_INVALID, SKU_TYPE_INVALID, CURRENCY_INVALID, an invalid line template (LINE_TEMPLATE_EMPTY, LINE_TEMPLATE_INVALID), or FIELD_TOO_LONG on a changed default_gl, default_tax_category or invoice_line_templates over its cap; 409 STALE_REVISION.",
+        "description": "Replaces the tenant settings at the version the caller read (If-Match), currencies included (required; [] offers any currency, D-438), and records the caller and the time. Each offered currency is one the currency table resolves, listed once; else 400 CURRENCY_INVALID naming the code and the reason (D-529), or with a fixed message that does not repeat a value that is not three uppercase letters. A GL code or a tax category other than the stored one is at most 64 characters, and a line template other than the one stored for its SKU type 2000; a stored text sent back unchanged passes whatever its length (D-457). Refusals: 400 TIMING_INVALID, SKU_TYPE_INVALID, CURRENCY_INVALID, an invalid line template (LINE_TEMPLATE_EMPTY, LINE_TEMPLATE_INVALID), or FIELD_TOO_LONG on a changed default_gl, default_tax_category or invoice_line_templates over its cap; 409 STALE_REVISION.",
         "operationId": "bss_pricing.put_settings",
         "parameters": [
           {
@@ -52991,6 +53503,109 @@
         "summary": "Re-run repositories still marked in_progress",
         "tags": [
           "GitHub Mirror"
+        ]
+      }
+    },
+    "/license-resolver/v1/is-licensed": {
+      "post": {
+        "operationId": "license_resolver_api_rest_is_licensed",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseCheckRequest"
+              }
+            }
+          },
+          "description": "",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LicenseDecision"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "internalToken": []
+          }
         ]
       }
     },
@@ -60924,7 +61539,7 @@
     },
     "/settings-service/v1/categories": {
       "get": {
-        "description": "List categories visible to the caller, ordered by sort order then name. Supports OData `$filter` over `key`, `name` and `domain_affinity`, and `$orderby` over `key` and `name`, with cursor pagination. `$orderby` over `domain_affinity` is refused: it may be empty, and a page cursor cannot carry an empty value. `$select` is not supported and is rejected rather than ignored.",
+        "description": "List categories visible to the caller, ordered by sort order then name. Supports OData `$filter` over `key`, `name`, `domain_affinity` and `sort_order`, and `$orderby` over `key`, `name` and `sort_order`, each `asc` or `desc`, with cursor pagination; the default order is sort order then name, and `name` is appended as the tiebreaker unless it is already named; `page_info.total_count` is how many categories the whole listing holds. `$orderby` over `domain_affinity` is refused: it may be empty, and a page cursor cannot carry an empty value. `$select` is not supported and is rejected rather than ignored. Each category carries `setting_count`, `advanced_count` and `retired_count` -- the settings the caller's browse of the category would list, every status, and of those the `advanced` and the `retired` ones -- when the caller may read values; a caller without that read gets the categories and no counts.",
         "operationId": "settings_service.list_categories",
         "parameters": [
           {
@@ -60946,7 +61561,7 @@
             }
           },
           {
-            "description": "OData v4 filter expression\n- key: eq|ne|contains|startswith|endswith|in\n- name: eq|ne|contains|startswith|endswith|in\n- domain_affinity: eq|ne|contains|startswith|endswith|in",
+            "description": "OData v4 filter expression\n- key: eq|ne|contains|startswith|endswith|in\n- name: eq|ne|contains|startswith|endswith|in\n- domain_affinity: eq|ne|contains|startswith|endswith|in\n- sort_order: eq|ne|gt|ge|lt|le|in",
             "in": "query",
             "name": "$filter",
             "required": false,
@@ -60955,7 +61570,7 @@
             }
           },
           {
-            "description": "OData v4 orderby expression\n- key asc\n- key desc\n- name asc\n- name desc",
+            "description": "OData v4 orderby expression\n- key asc\n- key desc\n- name asc\n- name desc\n- sort_order asc\n- sort_order desc",
             "in": "query",
             "name": "$orderby",
             "required": false,
@@ -60969,11 +61584,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_CategoryDto"
+                  "$ref": "#/components/schemas/CountedPage_CategoryDto"
                 }
               }
             },
-            "description": "A page of categories with its pagination cursors"
+            "description": "A page of categories with its pagination cursors and the total"
           },
           "400": {
             "content": {
@@ -61060,6 +61675,15 @@
               "startswith",
               "endswith",
               "in"
+            ],
+            "sort_order": [
+              "eq",
+              "ne",
+              "gt",
+              "ge",
+              "lt",
+              "le",
+              "in"
             ]
           }
         },
@@ -61068,7 +61692,9 @@
             "key asc",
             "key desc",
             "name asc",
-            "name desc"
+            "name desc",
+            "sort_order asc",
+            "sort_order desc"
           ]
         }
       },
@@ -61303,7 +61929,7 @@
         ]
       },
       "get": {
-        "description": "Fetch one category by id. A category outside the caller's administrative domain answers 404 rather than 403, so a hidden category's existence is not disclosed. The response carries the category's ETag, which a later PATCH or DELETE must echo in `If-Match`.",
+        "description": "Fetch one category by id. A category outside the caller's administrative domain answers 404 rather than 403, so a hidden category's existence is not disclosed. The response carries the category's ETag, which a later PATCH or DELETE must echo in `If-Match`, and the same setting counts the listing carries, when the caller may read values.",
         "operationId": "settings_service.get_category",
         "parameters": [
           {
@@ -61598,11 +62224,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_DeclarationDto"
+                  "$ref": "#/components/schemas/CountedPage_DeclarationDto"
                 }
               }
             },
-            "description": "A page of declarations with its pagination cursors"
+            "description": "A page of declarations with its pagination cursors and the total"
           },
           "400": {
             "content": {
@@ -62295,7 +62921,7 @@
     },
     "/settings-service/v1/search": {
       "get": {
-        "description": "Cross-field search over every category the caller may see. Matches a setting's key, description, category name, Schema Default and the overrides explicitly set inside the target's subtree, under the same authorization, target, visibility and `hidden` rules as browsing; results come back flat and ordered by key, each hit with its category, the field that matched -- one of `key`, `description`, `category_name`, `default_value` or `value` -- and its declaration's `mode` as a tag that withholds nothing. A hit on the key, description, category name or default belongs to the declaration and carries no scope; a hit on an override names the scope and tenant where it is set. Search runs over stored rows, not resolved values: an inherited value is a hit where it was set, and a default is a hit on its declaration. `tenant` bounds the override corpus to that subtree and is resolution context as everywhere else. `q` is a case-insensitive substring of at least two characters and at most two hundred; shorter or longer is refused 400. A `secret` value is never matched, so an empty result says nothing about it; a `pii` value is matched only for a caller entitled to read it unmasked. A page holds up to `limit` settings; a setting with several matching overrides contributes one hit per override. `$filter` takes the grammar `GET /settings` takes - `category_id eq`, `key eq`, `key in (...)` and `needs_review eq true`, joined by `and` - and narrows the corpus in the query, so the cursor pages the filtered set; `needs_review eq true` keeps the settings with an override flagged for review in the target's subtree. `$orderby` and `$select` are refused.",
+        "description": "Cross-field search over every category the caller may see. Matches a setting's key, display name, description, category name, Schema Default and the overrides explicitly set inside the target's subtree, under the same authorization, target, visibility and `hidden` rules as browsing; results come back flat and ordered by key, each hit with its category, the field that matched -- one of `key`, `display_name`, `description`, `category_name`, `default_value` or `value` -- and its declaration's `mode` as a tag that withholds nothing. A hit on the key, display name, description, category name or default belongs to the declaration and carries no scope; a hit on an override names the scope and tenant where it is set. Search runs over stored rows, not resolved values: an inherited value is a hit where it was set, and a default is a hit on its declaration. `tenant` bounds the override corpus to that subtree and is resolution context as everywhere else. `q` is a case-insensitive substring of at least two characters and at most two hundred; shorter or longer is refused 400. A `secret` value is never matched, so an empty result says nothing about it; a `pii` value is matched only for a caller entitled to read it unmasked. A page holds up to `limit` settings; a setting with several matching overrides contributes one hit per override. `$filter` takes the grammar `GET /settings` takes - `category_id eq`, `key eq`, `key in (...)` and `needs_review eq true`, joined by `and` - and narrows the corpus in the query, so the cursor pages the filtered set; `needs_review eq true` keeps the settings whose own override at the target is flagged for review; the value of a flagged override is never a match. `$orderby` and `$select` are refused.",
         "operationId": "settings_service.search_settings",
         "parameters": [
           {
@@ -62349,11 +62975,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_SearchHitDto"
+                  "$ref": "#/components/schemas/CountedPage_SearchHitDto"
                 }
               }
             },
-            "description": "A page of hits, ordered by key, with its pagination cursors"
+            "description": "A page of hits, ordered by key, with its pagination cursors and the total of matching settings"
           },
           "400": {
             "content": {
@@ -62440,7 +63066,7 @@
     },
     "/settings-service/v1/settings": {
       "get": {
-        "description": "Resolve a page of settings at one scope. `tenant` is resolution context, never a filter: omitted, it is the caller's own tenant, which for a platform administrator is the root and therefore platform scope; a tenant outside the caller's subtree, or a standalone descendant, answers 403. OData `$filter` supports `category_id eq`, `key eq`, `key in (...)` and `needs_review eq true`, joined by `and`; an unmapped field or unsupported operator answers 400 rather than an unfiltered page. `$orderby` takes `key` and `category_id`; any other field answers 400. Each item carries its own outcome, so a named key that does not exist is reported in its entry, never as a failure of the request. `needs_review eq true` lists the flagged override rows in the caller's subtree instead of resolved values. Values are masked by classification.",
+        "description": "Resolve a page of settings at one scope. `tenant` is resolution context, never a filter: omitted, it is the caller's own tenant, which for a platform administrator is the root and therefore platform scope; a tenant outside the caller's subtree, or a standalone descendant, answers 403. OData `$filter` supports `category_id eq`, `key eq`, `key in (...)` and `needs_review eq true`, joined by `and`; an unmapped field or unsupported operator answers 400 rather than an unfiltered page. `$orderby` takes `key` and `category_id`; any other field answers 400. Each item carries its own outcome, so a named key that does not exist is reported in its entry, never as a failure of the request. `needs_review eq true` narrows the page to the settings whose own override at the target tenant is flagged for review, still resolved values with the flag beside them, paged and counted over the narrowed set; a named key that is visible but not flagged is absent from it. The flagged rows of the target's subtree are `GET /settings-service/v1/settings/review`. Values are masked by classification.",
         "operationId": "settings_service.browse_settings",
         "parameters": [
           {
@@ -62494,11 +63120,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_SettingItemDto"
+                  "$ref": "#/components/schemas/CountedPage_SettingItemDto"
                 }
               }
             },
-            "description": "A page of per-key outcomes with its pagination cursors"
+            "description": "A page of per-key outcomes with its pagination cursors and the total of settings the listing holds under its filter"
           },
           "400": {
             "content": {
@@ -62690,6 +63316,138 @@
         ]
       }
     },
+    "/settings-service/v1/settings/review": {
+      "get": {
+        "description": "The override rows flagged for review at the target tenant and its descendants, one item per row at the scope that holds it - the place it must be fixed - not one resolved value per setting. Ordered by setting, then tenant, and paged by a row-level cursor: a setting flagged at more tenants than `limit` continues on the next page, and the cursor is bound to the `$filter` and the target, so it is refused 400 under another. `tenant` follows the read surface: omitted, the caller's own tenant; a tenant outside the caller's subtree or a standalone descendant answers 403, and standalone descendants' rows are not listed. `$filter` takes `category_id eq`, `key eq` and `key in (...)`, joined by `and`; `needs_review` is refused 400, as is any other field or operator, and a named key with no flagged row simply has no item. `$orderby` and `$select` are refused 400. `limit` defaults to 50 and is capped at 200. A target whose subtree exceeds the budget answers 400 `subtree_too_large`, never a partial listing. A setting hidden from the caller has no rows here. Values are masked by classification - a `secret` never shows its value or its reference - and the setter's identity is masked for a caller without the PII entitlement.",
+        "operationId": "settings_service.list_review",
+        "parameters": [
+          {
+            "description": "Target tenant id; omitted, the caller's own tenant",
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Cursor for pagination",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "OData v4 filter expression\n- key: eq|ne|contains|startswith|endswith|in\n- category_id: eq|ne|in",
+            "in": "query",
+            "name": "$filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ReviewItemDto"
+                }
+              }
+            },
+            "description": "A page of flagged override rows with its pagination cursors"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List values needing review",
+        "tags": [
+          "settings-values"
+        ],
+        "x-odata-filter": {
+          "allowedFields": {
+            "category_id": [
+              "eq",
+              "ne",
+              "in"
+            ],
+            "key": [
+              "eq",
+              "ne",
+              "contains",
+              "startswith",
+              "endswith",
+              "in"
+            ]
+          }
+        }
+      }
+    },
     "/settings-service/v1/settings/{key}": {
       "get": {
         "description": "Resolve one setting at a scope: the value masked by classification, its source and source scope, the value type's traits, the inheritance trail with per-entry setter identity, a leak-safe `last_change_at`, the scope's own review flag when its override is flagged, and in `ETag` the value state tag a write at that scope must present. A key with no declaration answers 404; a retired declaration answers 410 with the `SETTING_RETIRED` precondition; a target outside the caller's subtree or a standalone descendant answers 403.",
@@ -62862,11 +63620,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_AuditRecordDto"
+                  "$ref": "#/components/schemas/CountedPage_AuditRecordDto"
                 }
               }
             },
-            "description": "A page of audit records, newest first, with its pagination cursors"
+            "description": "A page of audit records, newest first, with its pagination cursors and the total"
           },
           "400": {
             "content": {
@@ -63518,7 +64276,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_RestrictionDto"
+                  "$ref": "#/components/schemas/CountedPage_RestrictionDto"
                 }
               }
             },
@@ -66464,7 +67222,7 @@
         ]
       },
       "get": {
-        "description": "Return one entity, projected by `$select`. The key is either a canonical GTS identifier or the Registry Reference UUID derived from it; a key over 1024 bytes is a 400, and any other key naming no entity is a 404. Absent `$select` is the document-free default `gts_id,gts_uuid,kind,origin,lifecycle_status`; documents are selected individually from `content`, `resolved_schema`, `effective_traits` and `effective_traits_schema` (the last three Type Schemas only), plus the `provenance` group. Names are case-insensitive; an empty, duplicate, unknown or nested name is a 400. `gts_id`, `gts_uuid`, `kind` and `lifecycle_status` are always returned, whether or not `$select` names them, so a deleted entity is still readable and reports it. No other query parameter is accepted. The `ETag` is scoped to the `$select`; `If-None-Match` with a current one returns a bodyless 304.",
+        "description": "Return one entity, projected by `$select`. The key is either a canonical GTS identifier or the Registry Reference UUID derived from it; a key over 1024 bytes is a 400, and any other key naming no entity is a 404. Absent `$select` is the document-free default `gts_id,gts_uuid,kind,origin,lifecycle_status`; documents are selected individually from `content`, `resolved_schema`, `effective_traits` and `effective_traits_schema` (the last three Type Schemas only), plus the `provenance` group of a Type Schema (omitted on an Instance). Names are case-insensitive; an empty, duplicate, unknown or nested name is a 400. `gts_id`, `gts_uuid`, `kind` and `lifecycle_status` are always returned, whether or not `$select` names them, so a deleted entity is still readable and reports it. No other query parameter is accepted. The `ETag` is scoped to the `$select`; `If-None-Match` with a current one returns a bodyless 304.",
         "operationId": "types_registry.get_entity",
         "parameters": [
           {

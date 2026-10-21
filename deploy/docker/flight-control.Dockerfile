@@ -1,6 +1,10 @@
 # Multi-stage build for the CF/Gears Flight Control image.
 #
-# Build (static authn, Kubernetes platform-plane auth, and OTel):
+# The release pipeline (.github/workflows/publish-artifacts.yml) builds this from
+# the `flight-control` entry in deploy/components.yaml; the production build args
+# live there, not here.
+#
+# Build by hand:
 #   docker build -f deploy/docker/flight-control.Dockerfile \
 #     -t ghcr.io/constructorfabric/flight-control:dev .
 #
@@ -13,7 +17,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Builder
 # ---------------------------------------------------------------------------
-FROM rust:1.98.1-bookworm@sha256:93ce27a88655056a51dbdd8f5f2d7ddc071c7b0070fb288a37b5a285fc83971e AS builder
+FROM rust:1.99.1-bookworm@sha256:e12566d5abc17a0da741628782cdb504b68b8961f5bfcf677936bf3e8b32de29 AS builder
 
 # BUILD_PROFILE: "release" (default, optimized) or "dev" (fast compile).
 ARG BUILD_PROFILE=release
